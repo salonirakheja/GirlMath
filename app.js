@@ -238,10 +238,6 @@ function calculateMetrics(data) {
     let rawUses = metrics.usesProvided ? data.uses : categoryDefaultUses[metrics.category];
     let normalizedUsesValue = normalizeUses(rawUses);
     
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/7e890f55-d8f9-472f-9f88-eff2b6294469',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:calculateMetrics:uses',message:'Uses calculation',data:{dataUses:data.uses,usesProvided:metrics.usesProvided,rawUses:rawUses,normalizedUsesValue:normalizedUsesValue,categoryDefault:categoryDefaultUses[metrics.category]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
-    // #endregion
-    
     metrics.uses = normalizedUsesValue || 1; 
     metrics.usesEstimated = !metrics.usesProvided;
 
@@ -798,19 +794,19 @@ function generateResults(data) {
     const justificationEl = document.getElementById('screenJustification');
     
     if (verdictEl) {
-        verdictEl.textContent = metrics.stamp || '--';
+        verdictEl.textContent = metrics.stamp || '—';
     }
     
     if (scoreEl) {
-        scoreEl.textContent = `${metrics.score || 0}/100`;
+        scoreEl.textContent = metrics.score !== undefined && metrics.score !== null ? `${metrics.score}/100` : '—';
     }
     
     if (costPerUseEl) {
-        // Show cost per use if available, otherwise show N/A
+        // Show cost per use if available, otherwise show —
         if (metrics.costPerUse !== null && metrics.costPerUse !== undefined) {
             costPerUseEl.textContent = `$${metrics.costPerUse.toFixed(2)}`;
         } else {
-            costPerUseEl.textContent = 'N/A';
+            costPerUseEl.textContent = '—';
         }
     }
     
@@ -819,6 +815,7 @@ function generateResults(data) {
             savingsEl.textContent = `$${metrics.savings.toFixed(2)} (${metrics.discountPercent.toFixed(0)}% off)`;
             savingsEl.parentElement.style.display = 'flex';
         } else {
+            savingsEl.textContent = '—';
             savingsEl.parentElement.style.display = 'none';
         }
     }
@@ -829,7 +826,7 @@ function generateResults(data) {
         if (metrics.budgetPercentOfVibe !== null && metrics.budgetPercentOfVibe !== undefined) {
             budgetPercentEl.textContent = `${metrics.budgetPercentOfVibe.toFixed(1)}%`;
         } else {
-            budgetPercentEl.textContent = 'N/A';
+            budgetPercentEl.textContent = '—';
         }
     }
     
@@ -1041,11 +1038,11 @@ function updateVerdictLive() {
             const savingsEl = document.getElementById('screenSavings');
             const justificationEl = document.getElementById('screenJustification');
             
-            if (verdictEl) verdictEl.textContent = '--';
-            if (scoreEl) scoreEl.textContent = '0/100';
-            if (costPerUseEl) costPerUseEl.textContent = 'N/A';
+            if (verdictEl) verdictEl.textContent = '—';
+            if (scoreEl) scoreEl.textContent = '—';
+            if (costPerUseEl) costPerUseEl.textContent = '—';
             if (savingsEl) {
-                savingsEl.textContent = '$0.00';
+                savingsEl.textContent = '—';
                 savingsEl.parentElement.style.display = 'none';
             }
             if (justificationEl) justificationEl.textContent = '';
@@ -1065,10 +1062,10 @@ function updateVerdictLive() {
                 const savingsEl = document.getElementById('screenSavings');
                 const justificationEl = document.getElementById('screenJustification');
                 
-                if (verdictEl) verdictEl.textContent = '--';
-                if (scoreEl) scoreEl.textContent = '0/100';
-                if (costPerUseEl) costPerUseEl.textContent = 'N/A';
-                if (savingsEl) savingsEl.textContent = '$0.00';
+                if (verdictEl) verdictEl.textContent = '—';
+                if (scoreEl) scoreEl.textContent = '—';
+                if (costPerUseEl) costPerUseEl.textContent = '—';
+                if (savingsEl) savingsEl.textContent = '—';
                 if (justificationEl) justificationEl.textContent = '';
             }
             return;
@@ -1220,6 +1217,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     const label = vibeLabels[percent] || 'Balanced';
                     vibeLabel.textContent = `${label} (${percent}%)`;
                     debounceUpdateVerdict();
+                }
+            });
+        }
+        
+        // Set up baseline accordion toggle
+        const baselineHeader = document.getElementById('baselineHeader');
+        const baselineContent = document.getElementById('baselineContent');
+        
+        if (baselineHeader && baselineContent) {
+            baselineHeader.addEventListener('click', function() {
+                const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                this.setAttribute('aria-expanded', !isExpanded);
+                
+                if (isExpanded) {
+                    baselineContent.style.display = 'none';
+                } else {
+                    baselineContent.style.display = 'block';
                 }
             });
         }
@@ -1431,18 +1445,18 @@ async function handleShare() {
                 });
                 return; // Successfully shared
             } catch (shareError) {
-                // User cancelled or error - fall through to download
+                // User cancelled or error
                 if (shareError.name === 'AbortError') {
-                    return; // User cancelled, don't download
+                    return; // User cancelled
                 }
             }
         }
         
-        // Fallback: download the image
-        const link = document.createElement('a');
-        link.download = `girl-math-verdict-${Date.now()}.png`;
-        link.href = dataUrl;
-        link.click();
+        // Fallback: copy link to clipboard if share fails or not supported
+        const shareUrl = generateShareableUrl(data);
+        if (shareUrl) {
+            copyUrlToClipboard(shareUrl);
+        }
         
     } catch (error) {
         console.error('Error generating image:', error);
@@ -1484,9 +1498,9 @@ function populateShareableCard(metrics, data) {
     const shareablePrice = document.getElementById('shareablePrice');
     const shareableCostPerUse = document.getElementById('shareableCostPerUse');
     const shareablePunchline = document.getElementById('shareablePunchline');
-    const shareableInputs = document.getElementById('shareableInputs');
+    const shareableCategory = document.getElementById('shareableCategory');
     
-    // Check for required elements (some may not exist depending on page)
+    // Check for required elements
     if (!shareableCard || !shareableStamp || !shareablePunchline) {
         console.error('ShareableCard required elements not found');
         return false;
@@ -1499,13 +1513,27 @@ function populateShareableCard(metrics, data) {
         shareableCard.className = 'shareable-card approved';
     }
     
-    // Get justification from current display or generate category-based one
+    // Set category
+    if (shareableCategory) {
+        const categoryNameMap = {
+            clothes: 'CLOTHING',
+            skincare: 'SKINCARE',
+            travel: 'TRAVEL',
+            food: 'FOOD',
+            subscription: 'SUBSCRIPTION',
+            gift: 'GIFT',
+            jewellery: 'JEWELLERY',
+            other: 'PURCHASE'
+        };
+        shareableCategory.textContent = categoryNameMap[metrics.category] || 'PURCHASE';
+    }
+
+    // Get justification
     let punchline = '';
     const justificationEl = document.getElementById('screenJustification');
     if (justificationEl && justificationEl.textContent.trim()) {
         punchline = justificationEl.textContent.trim();
     } else {
-        // Check punchline element (for verdict page)
         const punchlineEl = document.getElementById('punchline');
         if (punchlineEl && punchlineEl.textContent.trim()) {
             punchline = punchlineEl.textContent.trim();
@@ -1518,242 +1546,31 @@ function populateShareableCard(metrics, data) {
     if (metrics && metrics.verdictInfo) {
         shareableStamp.textContent = metrics.verdictInfo.stamp;
         shareableStamp.className = `shareable-stamp ${metrics.verdict}`;
-    } else {
-        // Fallback to current stamp element from calculator screen
-        const verdictEl = document.getElementById('screenVerdict');
-        if (verdictEl && verdictEl.textContent.trim()) {
-            shareableStamp.textContent = verdictEl.textContent;
-            shareableStamp.className = `shareable-stamp ${metrics?.verdict || 'approved'}`;
-        }
     }
     
-    // Populate score (if element exists)
+    // Populate score
     if (shareableScore && metrics && metrics.score !== undefined) {
         shareableScore.textContent = `${metrics.score}/100`;
-    } else if (shareableScore) {
-        shareableScore.textContent = '0/100';
     }
     
-    // Populate price (if element exists)
+    // Populate price
     if (shareablePrice && metrics && metrics.price !== undefined) {
         shareablePrice.textContent = `$${metrics.price.toFixed(2)}`;
-    } else if (shareablePrice && data && data.price) {
-        shareablePrice.textContent = `$${parseFloat(data.price).toFixed(2)}`;
     }
     
-    // Populate cost per use (if element exists)
+    // Populate cost per use
     if (shareableCostPerUse) {
         if (metrics && metrics.costPerUse !== null && metrics.costPerUse !== undefined) {
-            shareableCostPerUse.textContent = `$${metrics.costPerUse.toFixed(2)} per use`;
+            shareableCostPerUse.textContent = `$${metrics.costPerUse.toFixed(2)}`;
         } else {
-            shareableCostPerUse.textContent = 'Cost per use: N/A';
+            shareableCostPerUse.textContent = '—';
         }
     }
     
     // Populate punchline
     shareablePunchline.textContent = punchline || 'The math is mathing ✨';
     
-    // Populate inputs (if element exists - for index.html compatibility)
-    if (shareableInputs && data) {
-        const categoryNamesForCard = {
-            clothes: 'Clothing 👗',
-            skincare: 'Skincare 💆',
-            travel: 'Travel ✈️',
-            food: 'Food 🍕',
-            subscription: 'Subscription 📱',
-            gift: 'Gift 🎁',
-            jewellery: 'Jewellery 💍',
-            other: 'Other 💫'
-        };
-        
-        const priceValue = parseFloat(data.price) || 0;
-        const categoryLabel = categoryNamesForCard[data.category] || data.category || 'Other';
-        const usesDisplay = data.uses ? `${data.uses} uses` : 'Default uses';
-        
-        shareableInputs.innerHTML = `
-            <div>Item Price: $${priceValue.toFixed(2)}</div>
-            <div>Category: ${categoryLabel}</div>
-            <div>${usesDisplay}</div>
-        `;
-    } else if (shareableInputs) {
-        shareableInputs.innerHTML = '';
-    }
-    
     return true;
-}
-
-// Download verdict card as PNG image
-async function downloadVerdictCard() {
-    // Get current metrics and data
-    let metrics = window.currentMetrics;
-    let data = window.currentData;
-    
-    // If not available, try to get from form or sessionStorage
-    if (!metrics || !data) {
-        const form = document.getElementById('girlMathForm');
-        if (form) {
-            const formData = new FormData(form);
-            data = Object.fromEntries(formData);
-        } else {
-            data = JSON.parse(sessionStorage.getItem('girlMathData') || '{}');
-        }
-        
-        if (data && data.price) {
-            if (!data.category) data.category = 'other';
-            metrics = calculateMetrics(data);
-        } else {
-            alert('Please fill in the required fields first!');
-            return;
-        }
-    }
-    
-    const shareableCard = document.getElementById('shareableCard');
-    if (!shareableCard) {
-        alert('Error: ShareableCard element not found');
-        return;
-    }
-    
-    // Check if html2canvas library is available
-    if (typeof html2canvas === 'undefined') {
-        alert('Image library is loading. Please try again in a moment.');
-        return;
-    }
-    
-    try {
-        // Populate ShareableCard with data
-        if (!populateShareableCard(metrics, data)) {
-            alert('Error populating shareable card');
-            return;
-        }
-        
-        // Temporarily show the ShareableCard (but keep it off-screen)
-        shareableCard.style.position = 'fixed';
-        shareableCard.style.top = '-9999px';
-        shareableCard.style.left = '-9999px';
-        shareableCard.style.display = 'block';
-        shareableCard.style.zIndex = '10000';
-        shareableCard.style.width = '1080px';
-        shareableCard.style.height = '1920px';
-        
-        // Wait a moment for rendering
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Generate image using html2canvas
-        const canvas = await html2canvas(shareableCard, {
-            width: 1080,
-            height: 1920,
-            scale: 2, // Higher quality for social media
-            useCORS: true,
-            backgroundColor: null,
-            logging: false
-        });
-        
-        // Convert canvas to data URL
-        const dataUrl = canvas.toDataURL('image/png', 1.0);
-        
-        // Hide ShareableCard again
-        shareableCard.style.display = 'none';
-        
-        // Download the image
-        const link = document.createElement('a');
-        link.download = `girl-math-verdict-${Date.now()}.png`;
-        link.href = dataUrl;
-        link.click();
-        
-    } catch (error) {
-        console.error('Error generating image:', error);
-        alert('Error generating image. Please try again or take a screenshot.');
-        // Make sure to hide ShareableCard on error
-        const shareableCard = document.getElementById('shareableCard');
-        if (shareableCard) {
-            shareableCard.style.display = 'none';
-        }
-    }
-}
-
-// Download image using ShareableCard
-async function downloadImage() {
-    // Get current metrics and data
-    let metrics = window.currentMetrics;
-    let data = window.currentData;
-    
-    // If not available, try to get from form or sessionStorage
-    if (!metrics || !data) {
-        const form = document.getElementById('girlMathForm');
-        if (form) {
-            const formData = new FormData(form);
-            data = Object.fromEntries(formData);
-        } else {
-            data = JSON.parse(sessionStorage.getItem('girlMathData') || '{}');
-        }
-        
-        if (data && data.price) {
-            if (!data.category) data.category = 'other';
-            metrics = calculateMetrics(data);
-        } else {
-            alert('Please fill in the required fields first!');
-            return;
-        }
-    }
-    
-    const shareableCard = document.getElementById('shareableCard');
-    if (!shareableCard) {
-        alert('Error: ShareableCard element not found');
-        return;
-    }
-    
-    // Check if html-to-image library is available
-    if (typeof htmlToImage === 'undefined') {
-        alert('Image library is loading. Please try again in a moment.');
-        return;
-    }
-    
-    try {
-        // Populate ShareableCard with data
-        if (!populateShareableCard(metrics, data)) {
-            alert('Error populating shareable card');
-            return;
-        }
-        
-        // Temporarily show the ShareableCard (but keep it off-screen)
-        shareableCard.style.position = 'fixed';
-        shareableCard.style.top = '-9999px';
-        shareableCard.style.left = '-9999px';
-        shareableCard.style.display = 'block';
-        shareableCard.style.zIndex = '10000';
-        shareableCard.style.width = '1080px';
-        shareableCard.style.height = '1920px';
-        
-        // Wait a moment for rendering
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Generate image using html-to-image
-        const dataUrl = await htmlToImage.toPng(shareableCard, {
-            width: 1080,
-            height: 1920,
-            pixelRatio: 2, // Higher quality for social media
-            quality: 1.0,
-            cacheBust: true // Ensure fresh rendering
-        });
-        
-        // Hide ShareableCard again
-        shareableCard.style.display = 'none';
-        
-        // Download the image
-        const link = document.createElement('a');
-        link.download = `girl-math-verdict-${Date.now()}.png`;
-        link.href = dataUrl;
-        link.click();
-        
-    } catch (error) {
-        console.error('Error generating image:', error);
-        alert('Error generating image. Please try again or take a screenshot.');
-        // Make sure to hide ShareableCard on error
-        const shareableCard = document.getElementById('shareableCard');
-        if (shareableCard) {
-            shareableCard.style.display = 'none';
-        }
-    }
 }
 
 // Generate alternate verdict

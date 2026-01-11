@@ -7,7 +7,7 @@ A playful calculator that turns purchases into "emotionally acceptable" logic (c
 - **Interactive Form**: Input price, category, and justification mode
 - **Three Modes**: Soft Life (supportive), Bestie Roast (funny savage), Delulu MBA (finance-y)
 - **Smart Verdicts**: Calculates cost-per-use, savings, emotional ROI
-- **Shareable Cards**: Copy link, copy caption, download image (coming soon)
+- **Shareable Cards**: Copy link, copy caption (coming soon)
 - **AI-Enhanced Punchlines**: Optional AI-powered punchline generation via API
 
 ## Setup
@@ -88,7 +88,7 @@ GirlMath/
 3. Determines verdict (APPROVED ✅ / SIDE-EYE 👀 / ABSOLUTELY NOT 🚫)
 4. Generates punchline based on mode and category
 5. Optional: Calls API for AI-enhanced alternate punchlines
-6. User can share link, copy caption, or download image
+6. User can share link or copy caption.
 
 ## License
 
