@@ -89,9 +89,6 @@ function calculateVerdict(data) {
     if (metrics.category === 'clothes' && metrics.costPerUse < 5) {
         score += 1; // Clothes with decent cost-per-wear get bonus
     }
-    if (metrics.category === 'travel' && metrics.price > 500) {
-        score += 1; // Travel experiences are valuable
-    }
     if (metrics.category === 'food' && metrics.price < 30) {
         score += 1; // Reasonable food prices are fine
     }
@@ -128,10 +125,6 @@ function generateTemplatePunchlines(metrics) {
                 (d) => d.costPerDay < 2 ? `$${d.costPerDay.toFixed(2)} per day for glowing skin? That's a health investment.` : null,
                 (d) => d.savings > 0 ? "Self-care isn't a luxury, it's a necessity. And you got it on sale! ✨" : "You can't put a price on good skin."
             ],
-            travel: [
-                (d) => `Memories are priceless. This trip is an investment in your happiness.`,
-                (d) => d.price > 500 ? "Experiences > things. You're building your story." : "A change of scenery is essential for mental health."
-            ],
             food: [
                 (d) => "Nourishing your body is always worth it. You deserve good food. 💅",
                 (d) => "Food is fuel and joy. This purchase supports both."
@@ -159,10 +152,6 @@ function generateTemplatePunchlines(metrics) {
                 (d) => d.price > 50 ? "Another serum? Your bathroom shelf called - it's tired." : "At least your skin will thank you (unlike your bank account).",
                 (d) => d.costPerDay < 2 ? "If you actually use this every day, I'll eat my hat. But fine, approved." : "Skincare addiction is real and you're living proof."
             ],
-            travel: [
-                (d) => "Another vacation? Your credit card is crying but your Instagram is thriving.",
-                (d) => d.price > 1000 ? "You could've bought a car. But photos > logic, I guess? ✈️" : "At least this one's relatively reasonable (for you)."
-            ],
             food: [
                 (d) => "You ordered delivery again? Remember when you said you'd 'cook more'? Yeah, me neither.",
                 (d) => d.price > 30 ? "$30 for lunch? You're living your best life and your wallet's worst nightmare." : "Fine, food is a need. Approved with side-eye."
@@ -189,10 +178,6 @@ function generateTemplatePunchlines(metrics) {
             skincare: [
                 (d) => `Annualized cost: $${((d.costPerDay || d.price / 30) * 365).toFixed(2)}/year. Compared to dermatologist visits ($500/session), NPV is positive.`,
                 (d) => `Compound value: $${d.price} investment in skin health = potential savings on future corrective procedures ($5000+). Strong IRR.`
-            ],
-            travel: [
-                (d) => `Content ROI: $${d.price} / estimated photo output (50 units) = $${(d.price / 50).toFixed(2)} per engagement-driving asset.`,
-                (d) => `Experience arbitrage: Travel premium ($${d.price}) vs. local alternatives = justified by network expansion + mental health ROI.`
             ],
             food: [
                 (d) => `Nutritional ROI: $${d.price} / caloric efficiency = cost-per-calorie optimization achieved.`,

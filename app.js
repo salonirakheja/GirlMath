@@ -10,10 +10,6 @@ const girlMathRules = {
             (data) => data.costPerDay ? `$${data.costPerDay.toFixed(2)}/day for glowing skin? That's self-care, not spending.` : null,
             (data) => data.savings > 0 ? "Self-care isn't luxury, it's necessity. And you got it on sale! ✨" : "You can't put a price on good skin."
         ],
-        travel: [
-            (data) => "Memories are priceless. This trip is an investment in your happiness.",
-            (data) => data.price > 500 ? "Experiences > things. You're building your story." : "A change of scenery is essential for mental health."
-        ],
         food: [
             (data) => "Nourishing your body is always worth it. You deserve good food. 💅",
             (data) => "Food is fuel and joy. This purchase supports both."
@@ -43,10 +39,6 @@ const girlMathRules = {
         skincare: [
             (data) => data.costPerDay ? `$${data.costPerDay.toFixed(2)}/day? I've wasted more on iced coffee and regret.` : null,
             (data) => data.price > 50 ? "Another serum? Your bathroom shelf called — it's tired." : "At least your skin will thank you (unlike your bank account)."
-        ],
-        travel: [
-            (data) => "Another vacation? Your credit card is crying but your Instagram is thriving.",
-            (data) => data.price > 1000 ? "You could've bought a car. But photos > logic, I guess? ✈️" : "At least this one's relatively reasonable (for you)."
         ],
         food: [
             (data) => "You ordered delivery again? Remember when you said you'd 'cook more'? Yeah, me neither.",
@@ -78,10 +70,6 @@ const girlMathRules = {
             (data) => data.costPerDay ? `$${data.costPerDay.toFixed(2)}/day. Annualized glow ROI exceeds emotional depreciation.` : null,
             (data) => data.costPerDay ? `Annualized cost: $${(data.costPerDay * 365).toFixed(0)}/yr. NPV positive vs. dermatologist visits.` : "Compound value: skin health investment = future procedure savings. Strong IRR."
         ],
-        travel: [
-            (data) => `Content ROI: $${data.price} / 50 photos = $${(data.price / 50).toFixed(2)} per engagement asset.`,
-            (data) => `Experience arbitrage: $${data.price} premium justified by network expansion + mental health ROI.`
-        ],
         food: [
             (data) => `Nutritional ROI: $${data.price} / caloric efficiency = cost-per-calorie optimization achieved.`,
             (data) => `Opportunity cost: Restaurant $${data.price} vs. home-cooked $${(data.price * 0.3).toFixed(0)}. Convenience premium justified.`
@@ -109,7 +97,6 @@ const girlMathRules = {
 const categoryDefaultUses = {
     skincare: 180,
     clothes: 30,
-    travel: 1,
     food: 1,
     subscription: 30,
     gift: 1,
@@ -149,7 +136,6 @@ const vibeLabels = {
 const categoryBonuses = {
     skincare: 15,     // Skincare/Wellness
     clothes: 12,      // Work/Investment
-    travel: 10,       // Experiences/Travel
     subscription: 8,  // Electronics
     jewellery: 8,     // Jewellery
     food: 0,          // Food/Gifts
@@ -171,7 +157,6 @@ const categoryJustifications = {
         skincare: "An investment in your future self.",
         clothes: "Quality pieces pay for themselves over time.",
         food: "Daily habits add up, but so does the joy.",
-        travel: "Memories last longer than things.",
         electronics: "Technology that boosts productivity is an investment.",
         subscription: "Recurring value justifies recurring costs.",
         gift: "A calculated decision that brings joy.",
@@ -182,7 +167,6 @@ const categoryJustifications = {
         skincare: "Self-care is important, and you got a good deal.",
         clothes: "A reasonable purchase for your wardrobe.",
         food: "You deserve good food, and the price works.",
-        travel: "Experiences are worth investing in.",
         electronics: "A practical upgrade that makes sense.",
         subscription: "The value seems worth the cost.",
         gift: "A thoughtful choice for someone special.",
@@ -193,7 +177,6 @@ const categoryJustifications = {
         skincare: "On the pricier side, but self-care matters.",
         clothes: "It's a stretch, but you might make it work.",
         food: "A bit expensive, but sometimes you need the treat.",
-        travel: "It's pricey, but experiences can be priceless.",
         electronics: "Higher than ideal, but could be worth it.",
         subscription: "Costly, but might pay off if you use it.",
         gift: "A generous choice - maybe a bit too generous?",
@@ -204,7 +187,6 @@ const categoryJustifications = {
         skincare: "This price doesn't add up for what you're getting.",
         clothes: "Hard to justify at this cost-per-wear ratio.",
         food: "Too expensive for what it is - consider alternatives.",
-        travel: "The numbers don't support this purchase right now.",
         electronics: "The cost-benefit analysis doesn't work out here.",
         subscription: "The monthly cost outweighs the value you'll get.",
         gift: "As much as you want to give, this one's too much.",
@@ -450,7 +432,6 @@ function calculateMetrics(data) {
     const categoryNamesForRationale = {
         skincare: 'Skincare/Wellness',
         clothes: 'Clothing',
-        travel: 'Experiences/Travel',
         subscription: 'Electronics / Productivity',
         jewellery: 'Jewellery'
     };
@@ -594,7 +575,6 @@ function generateCommunityInsight(metrics) {
     const categoryNames = {
         clothes: 'Clothing',
         skincare: 'skincare',
-        travel: 'travel',
         food: 'food',
         subscription: 'subscription',
         gift: 'gift',
@@ -851,16 +831,15 @@ function generateVerdict(data) {
     // Generate context pills
     const pillsEl = document.getElementById('contextPills');
     if (pillsEl && data.category) {
-        const categoryNamesForPills = {
-            clothes: 'Clothing 👗',
-            skincare: 'Skincare 💆',
-            travel: 'Travel ✈️',
-            food: 'Food 🍕',
-            subscription: 'Subscription 📱',
-            gift: 'Gift 🎁',
-            jewellery: 'Jewellery 💍',
-            other: 'Other 💫'
-        };
+    const categoryNamesForPills = {
+        clothes: 'Clothing 👗',
+        skincare: 'Skincare 💆',
+        food: 'Food 🍕',
+        subscription: 'Subscription 📱',
+        gift: 'Gift 🎁',
+        jewellery: 'Jewellery 💍',
+        other: 'Other 💫'
+    };
         pillsEl.innerHTML = `<span class="context-pill">${categoryNamesForPills[data.category] || data.category}</span>`;
     }
     
@@ -1315,7 +1294,6 @@ function generateShareCaption() {
     const categoryNameMap = {
         clothes: 'Clothing',
         skincare: 'skincare',
-        travel: 'travel',
         food: 'food',
         subscription: 'subscription',
         gift: 'gift',
@@ -1518,7 +1496,6 @@ function populateShareableCard(metrics, data) {
         const categoryNameMap = {
             clothes: 'CLOTHING',
             skincare: 'SKINCARE',
-            travel: 'TRAVEL',
             food: 'FOOD',
             subscription: 'SUBSCRIPTION',
             gift: 'GIFT',
