@@ -1,0 +1,21 @@
+{
+  "name": "girl-math",
+  "version": "1.0.0",
+  "description": "Girl Math - A playful calculator that turns purchases into emotionally acceptable logic",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Static site - no build needed'",
+    "start": "vercel dev"
+  },
+  "keywords": [
+    "girl-math",
+    "calculator",
+    "humor",
+    "social-media"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}

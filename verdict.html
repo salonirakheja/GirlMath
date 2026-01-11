@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Girl Math Verdict ✨</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@latest/dist/html-to-image.min.js"></script>
+</head>
+<body>
+    <!-- Hidden ShareableCard for image generation -->
+    <div id="shareableCard" class="shareable-card" style="display: none;">
+        <div class="shareable-card-content">
+            <div class="shareable-stamp" id="shareableStamp"></div>
+            <div class="shareable-punchline" id="shareablePunchline"></div>
+            <div class="shareable-url">girlmath.app</div>
+        </div>
+    </div>
+    <div class="container verdict-container">
+        <div class="verdict-card" id="verdictCard">
+            <div class="card-header">
+                <div class="context-pills" id="contextPills">
+                    <!-- Generated dynamically -->
+                </div>
+                <h2>GIRL MATH VERDICT</h2>
+            </div>
+            
+            <div class="stamp-container">
+                <div class="stamp" id="stamp">APPROVED ✅</div>
+            </div>
+
+            <div class="confidence-meter" id="confidenceMeter">
+                <!-- Generated dynamically -->
+            </div>
+
+            <div class="what-if-section" id="whatIfSection" style="display: none;">
+                <!-- Generated dynamically -->
+            </div>
+
+            <div class="community-insights-container" id="communityInsights">
+                <!-- Generated dynamically -->
+            </div>
+
+            <div class="metrics" id="metrics">
+                <!-- Generated dynamically -->
+            </div>
+
+            <div class="punchline" id="punchline">
+                <!-- Generated dynamically -->
+            </div>
+        </div>
+
+        <div class="actions">
+            <button onclick="copyLink()" class="action-btn primary">Share Result</button>
+            <a href="index.html" class="action-btn secondary">Start Over</a>
+        </div>
+        <footer class="footer">
+            Built as a lightweight consumer decision tool. Not financial advice.
+        </footer>
+    </div>
+    <script src="app.js"></script>
+    <script>
+        // Load verdict from URL params or sessionStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            let data = null;
+            
+            // Support both formats: individual parameters (new) or data parameter (old)
+            if (params.has('price') || params.has('data')) {
+                // New format: individual parameters
+                if (params.has('price')) {
+                    data = {
+                        price: params.get('price'),
+                        category: params.get('category') || '',
+                        uses: params.get('uses') || '',
+                        originalPrice: params.get('originalPrice') || params.get('listPrice') || '',
+                        discountPercent: params.get('discountPercent') || '',
+                        income: params.get('income') || '',
+                        budgetPercent: params.get('budgetPercent') || ''
+                    };
+                } 
+                // Old format: data parameter (JSON)
+                else if (params.has('data')) {
+                    try {
+                        data = JSON.parse(decodeURIComponent(params.get('data')));
+                        if (data.listPrice && !data.originalPrice) {
+                            data.originalPrice = data.listPrice;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing URL data:', e);
+                    }
+                }
+            } else {
+                // Fallback to sessionStorage
+                const storedData = sessionStorage.getItem('girlMathData');
+                if (storedData) {
+                    try {
+                        data = JSON.parse(storedData);
+                    } catch (e) {
+                        console.error('Error parsing stored data:', e);
+                    }
+                }
+            }
+            
+            if (data) {
+                generateVerdict(data);
+            } else {
+                // Redirect to home if no data
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>

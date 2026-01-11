@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Girl Math ✨ - Justify Your Purchase</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@latest/dist/html-to-image.min.js"></script>
+</head>
+<body>
+    <div class="background-decorations" aria-hidden="true">
+        <span class="decor decor-1">✨</span>
+        <span class="decor decor-2">💖</span>
+        <span class="decor decor-3">🍬</span>
+        <span class="decor decor-4">🎀</span>
+        <span class="decor decor-5">📎</span>
+        <span class="decor decor-6">⭐</span>
+        <span class="decor decor-7">🍭</span>
+        <span class="decor decor-8">🌸</span>
+        <span class="decor decor-9">✨</span>
+        <span class="decor decor-10">🎀</span>
+        <span class="decor decor-11">💖</span>
+        <span class="decor decor-12">🍬</span>
+        <span class="decor decor-13">📎</span>
+        <span class="decor decor-14">🦋</span>
+        <span class="decor decor-15">💫</span>
+        <span class="decor decor-16">🍦</span>
+        <span class="decor decor-17">🎈</span>
+        <span class="decor decor-18">🧁</span>
+        <span class="decor decor-19">🎀</span>
+        <span class="decor decor-20">🌈</span>
+        <span class="decor decor-21">🍓</span>
+        <span class="decor decor-22">💄</span>
+        <span class="decor decor-23">👛</span>
+        <span class="decor decor-24">💍</span>
+        <span class="decor decor-25">💅</span>
+        <span class="decor decor-26">💖</span>
+        <span class="decor decor-27">✨</span>
+        <span class="decor decor-28">🍭</span>
+        <span class="decor decor-29">🎀</span>
+        <span class="decor decor-30">🌸</span>
+    </div>
+    <!-- Hidden ShareableCard for image generation -->
+    <div id="shareableCard" class="shareable-card" style="display: none;">
+        <div class="shareable-card-content">
+            <div class="shareable-stamp" id="shareableStamp"></div>
+            <div class="shareable-score" id="shareableScore"></div>
+            <div class="shareable-punchline" id="shareablePunchline"></div>
+            <div class="shareable-inputs" id="shareableInputs"></div>
+            <div class="shareable-url">girlmath.app</div>
+        </div>
+    </div>
+    <div class="container">
+        <header>
+            <h1 class="title"><span class="sparkle-v" aria-hidden="true">✨</span>Girl Math Calculator <span class="sparkle">✨</span></h1>
+            <p class="subtitle">Usage-adjusted cost check</p>
+        </header>
+
+        <div class="calculator-body">
+            <!-- Calculator Screen -->
+            <div class="calculator-screen" id="calculatorScreen">
+                <div class="screen-content" id="screenContent">
+                    <div class="screen-line screen-main">
+                        <span class="screen-label">Verdict:</span>
+                        <span class="screen-value" id="screenVerdict">--</span>
+                    </div>
+                    <div class="screen-line">
+                        <span class="screen-label">Score:</span>
+                        <span class="screen-value" id="screenScore">0/100</span>
+                    </div>
+                    <div class="screen-line">
+                        <span class="screen-label">Cost per use:</span>
+                        <span class="screen-value" id="screenCostPerUse">$0.00</span>
+                    </div>
+                    <div class="screen-line">
+                        <span class="screen-label">Savings:</span>
+                        <span class="screen-value" id="screenSavings">$0.00</span>
+                    </div>
+                    <div class="screen-line">
+                        <span class="screen-label">% of monthly budget:</span>
+                        <span class="screen-value" id="screenBudgetPercent">0.0%</span>
+                    </div>
+                    <div class="screen-justification" id="screenJustification"></div>
+                </div>
+            </div>
+
+            <!-- Calculator Keypad -->
+            <div class="calculator-keypad">
+                <form id="girlMathForm" class="keypad-grid">
+                    <div class="keypad-key keypad-key-full baseline-section">
+                        <h3 class="key-label section-title">Your Baseline</h3>
+                        <p class="section-subtitle">Optional - helps personalize your verdict</p>
+                        <div class="baseline-grid">
+                            <div class="baseline-field">
+                                <label for="income" class="key-label">Annual Income</label>
+                                <select id="income" name="income" class="key-select">
+                                    <option value="">No selection</option>
+                                    <option value="under30">Under $30k</option>
+                                    <option value="30to60">$30k - $60k</option>
+                                    <option value="60to100">$60k - $100k</option>
+                                    <option value="100to200">$100k - $200k</option>
+                                    <option value="over200">$200k+</option>
+                                </select>
+                            </div>
+                            <div class="baseline-field baseline-field-full">
+                                <label for="budgetPercent" class="key-label">Monthly Budget Vibe: <span id="vibeLabel">Balanced (10%)</span></label>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                                    <input type="checkbox" id="skipVibe" name="skipVibe" style="margin: 0;">
+                                    <label for="skipVibe" style="font-size: 0.9rem; font-weight: normal; margin: 0; cursor: pointer;">Skip this</label>
+                                </div>
+                                <input type="range" id="budgetPercent" name="budgetPercent" class="key-slider" min="5" max="25" step="5" value="10">
+                                <div class="slider-labels">
+                                    <span>Disciplined</span>
+                                    <span>Lavish</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="keypad-key keypad-key-full">
+                        <label for="price" class="key-label">Item Price ($)</label>
+                        <input type="number" id="price" name="price" class="key-input" min="0" step="0.01" placeholder="0.00" required>
+                        <p id="priceHelper" class="input-helper"></p>
+                    </div>
+
+                    <div class="keypad-key keypad-key-full">
+                        <label for="category" class="key-label">Category</label>
+                        <select id="category" name="category" class="key-select" required>
+                            <option value="">Choose...</option>
+                            <option value="clothes">Clothing 👗</option>
+                            <option value="skincare">Skincare 💆</option>
+                            <option value="travel">Travel ✈️</option>
+                            <option value="food">Food 🍕</option>
+                            <option value="subscription">Subscription 📱</option>
+                            <option value="gift">Gift 🎁</option>
+                            <option value="jewellery">Jewellery 💍</option>
+                            <option value="other">Other 💫</option>
+                        </select>
+                    </div>
+
+                    <div class="keypad-key">
+                        <label for="uses" class="key-label">Uses</label>
+                        <input type="number" id="uses" name="uses" class="key-input" min="1" placeholder="30">
+                    </div>
+
+                    <div class="keypad-key keypad-key-full">
+                        <label for="originalPrice" class="key-label">Was it on sale? Enter the original price ($)</label>
+                        <input type="number" id="originalPrice" name="originalPrice" class="key-input" min="0" step="0.01" placeholder="e.g., 150">
+                    </div>
+
+                        <div class="keypad-key keypad-key-full">
+                            <div class="results-share">
+                                <button type="button" onclick="window.location.reload()" class="action-btn secondary">Clear</button>
+                            </div>
+                        </div>
+                </form>
+            </div>
+        </div>
+        <footer class="footer">
+            Built as a lightweight consumer decision tool. Not financial advice.
+        </footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
