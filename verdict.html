@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Girl Math Verdict ✨</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/html-to-image@latest/dist/html-to-image.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <!-- Hidden ShareableCard for image generation -->
     <div id="shareableCard" class="shareable-card" style="display: none;">
         <div class="shareable-card-content">
             <div class="shareable-stamp" id="shareableStamp"></div>
+            <div class="shareable-price" id="shareablePrice"></div>
+            <div class="shareable-cost-per-use" id="shareableCostPerUse"></div>
             <div class="shareable-punchline" id="shareablePunchline"></div>
             <div class="shareable-url">girlmath.app</div>
         </div>
@@ -51,7 +53,8 @@
         </div>
 
         <div class="actions">
-            <button onclick="copyLink()" class="action-btn primary">Share Result</button>
+            <button onclick="downloadVerdictCard()" class="action-btn secondary">Download Card</button>
+            <button onclick="copyLink()" class="action-btn secondary">Share Result</button>
             <a href="index.html" class="action-btn secondary">Start Over</a>
         </div>
         <footer class="footer">

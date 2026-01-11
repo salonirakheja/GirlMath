@@ -1481,11 +1481,14 @@ function populateShareableCard(metrics, data) {
     const shareableCard = document.getElementById('shareableCard');
     const shareableStamp = document.getElementById('shareableStamp');
     const shareableScore = document.getElementById('shareableScore');
+    const shareablePrice = document.getElementById('shareablePrice');
+    const shareableCostPerUse = document.getElementById('shareableCostPerUse');
     const shareablePunchline = document.getElementById('shareablePunchline');
     const shareableInputs = document.getElementById('shareableInputs');
     
-    if (!shareableCard || !shareableStamp || !shareableScore || !shareablePunchline || !shareableInputs) {
-        console.error('ShareableCard elements not found');
+    // Check for required elements (some may not exist depending on page)
+    if (!shareableCard || !shareableStamp || !shareablePunchline) {
+        console.error('ShareableCard required elements not found');
         return false;
     }
     
@@ -1524,18 +1527,34 @@ function populateShareableCard(metrics, data) {
         }
     }
     
-    // Populate score
-    if (metrics && metrics.score !== undefined) {
+    // Populate score (if element exists)
+    if (shareableScore && metrics && metrics.score !== undefined) {
         shareableScore.textContent = `${metrics.score}/100`;
-    } else {
+    } else if (shareableScore) {
         shareableScore.textContent = '0/100';
+    }
+    
+    // Populate price (if element exists)
+    if (shareablePrice && metrics && metrics.price !== undefined) {
+        shareablePrice.textContent = `$${metrics.price.toFixed(2)}`;
+    } else if (shareablePrice && data && data.price) {
+        shareablePrice.textContent = `$${parseFloat(data.price).toFixed(2)}`;
+    }
+    
+    // Populate cost per use (if element exists)
+    if (shareableCostPerUse) {
+        if (metrics && metrics.costPerUse !== null && metrics.costPerUse !== undefined) {
+            shareableCostPerUse.textContent = `$${metrics.costPerUse.toFixed(2)} per use`;
+        } else {
+            shareableCostPerUse.textContent = 'Cost per use: N/A';
+        }
     }
     
     // Populate punchline
     shareablePunchline.textContent = punchline || 'The math is mathing ✨';
     
-    // Populate inputs
-    if (data) {
+    // Populate inputs (if element exists - for index.html compatibility)
+    if (shareableInputs && data) {
         const categoryNamesForCard = {
             clothes: 'Clothing 👗',
             skincare: 'Skincare 💆',
@@ -1556,11 +1575,100 @@ function populateShareableCard(metrics, data) {
             <div>Category: ${categoryLabel}</div>
             <div>${usesDisplay}</div>
         `;
-    } else {
+    } else if (shareableInputs) {
         shareableInputs.innerHTML = '';
     }
     
     return true;
+}
+
+// Download verdict card as PNG image
+async function downloadVerdictCard() {
+    // Get current metrics and data
+    let metrics = window.currentMetrics;
+    let data = window.currentData;
+    
+    // If not available, try to get from form or sessionStorage
+    if (!metrics || !data) {
+        const form = document.getElementById('girlMathForm');
+        if (form) {
+            const formData = new FormData(form);
+            data = Object.fromEntries(formData);
+        } else {
+            data = JSON.parse(sessionStorage.getItem('girlMathData') || '{}');
+        }
+        
+        if (data && data.price) {
+            if (!data.category) data.category = 'other';
+            metrics = calculateMetrics(data);
+        } else {
+            alert('Please fill in the required fields first!');
+            return;
+        }
+    }
+    
+    const shareableCard = document.getElementById('shareableCard');
+    if (!shareableCard) {
+        alert('Error: ShareableCard element not found');
+        return;
+    }
+    
+    // Check if html2canvas library is available
+    if (typeof html2canvas === 'undefined') {
+        alert('Image library is loading. Please try again in a moment.');
+        return;
+    }
+    
+    try {
+        // Populate ShareableCard with data
+        if (!populateShareableCard(metrics, data)) {
+            alert('Error populating shareable card');
+            return;
+        }
+        
+        // Temporarily show the ShareableCard (but keep it off-screen)
+        shareableCard.style.position = 'fixed';
+        shareableCard.style.top = '-9999px';
+        shareableCard.style.left = '-9999px';
+        shareableCard.style.display = 'block';
+        shareableCard.style.zIndex = '10000';
+        shareableCard.style.width = '1080px';
+        shareableCard.style.height = '1920px';
+        
+        // Wait a moment for rendering
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Generate image using html2canvas
+        const canvas = await html2canvas(shareableCard, {
+            width: 1080,
+            height: 1920,
+            scale: 2, // Higher quality for social media
+            useCORS: true,
+            backgroundColor: null,
+            logging: false
+        });
+        
+        // Convert canvas to data URL
+        const dataUrl = canvas.toDataURL('image/png', 1.0);
+        
+        // Hide ShareableCard again
+        shareableCard.style.display = 'none';
+        
+        // Download the image
+        const link = document.createElement('a');
+        link.download = `girl-math-verdict-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+        
+    } catch (error) {
+        console.error('Error generating image:', error);
+        alert('Error generating image. Please try again or take a screenshot.');
+        // Make sure to hide ShareableCard on error
+        const shareableCard = document.getElementById('shareableCard');
+        if (shareableCard) {
+            shareableCard.style.display = 'none';
+        }
+    }
 }
 
 // Download image using ShareableCard

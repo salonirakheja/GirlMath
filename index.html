@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Girl Math ✨ - Justify Your Purchase</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/html-to-image@latest/dist/html-to-image.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <div class="background-decorations" aria-hidden="true">
@@ -44,9 +44,9 @@
     <div id="shareableCard" class="shareable-card" style="display: none;">
         <div class="shareable-card-content">
             <div class="shareable-stamp" id="shareableStamp"></div>
-            <div class="shareable-score" id="shareableScore"></div>
+            <div class="shareable-price" id="shareablePrice"></div>
+            <div class="shareable-cost-per-use" id="shareableCostPerUse"></div>
             <div class="shareable-punchline" id="shareablePunchline"></div>
-            <div class="shareable-inputs" id="shareableInputs"></div>
             <div class="shareable-url">girlmath.app</div>
         </div>
     </div>
@@ -150,6 +150,7 @@
 
                         <div class="keypad-key keypad-key-full">
                             <div class="results-share">
+                                <button type="button" onclick="downloadVerdictCard()" class="action-btn secondary">Download Card</button>
                                 <button type="button" onclick="window.location.reload()" class="action-btn secondary">Clear</button>
                             </div>
                         </div>
