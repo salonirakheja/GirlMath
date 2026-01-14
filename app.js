@@ -748,6 +748,26 @@ function applyWhatIfScenario(updates) {
 
 
 
+// Debounced calculator logging to avoid logging partial inputs
+let logTimeout = null;
+function logCalculatorUsage(price, category) {
+    clearTimeout(logTimeout);
+    logTimeout = setTimeout(() => {
+        // Only log if we have a valid price
+        if (!price || price <= 0) return;
+        
+        fetch('/api/log-calculator', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                price_low: price,
+                price_high: price,
+                category: category || 'other'
+            })
+        }).catch(() => {}); // Silently fail - logging is non-critical
+    }, 2000); // Wait 2 seconds after last input before logging
+}
+
 // Generate simplified inline results - update calculator screen
 function generateResults(data) {
     // Default mode to 'softlife' if not provided
@@ -757,6 +777,9 @@ function generateResults(data) {
     
     const metrics = calculateMetrics(data);
     const screen = document.getElementById('calculatorScreen');
+    
+    // Log calculator usage (debounced)
+    logCalculatorUsage(metrics.price, metrics.category);
     
     if (!screen) return;
     
@@ -1221,6 +1244,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             updateVerdictLive();
         }, 200);
+        
+        // Wire up Results button
+        const resultsBtn = document.getElementById('resultsBtn');
+        if (resultsBtn) {
+            resultsBtn.addEventListener('click', navigateToResults);
+        }
     }
 });
 
@@ -1241,6 +1270,76 @@ function getCurrentData() {
     }
     
     return data;
+}
+
+// Helper function to generate URL for verdict page
+function generateVerdictUrl(data) {
+    if (!data) {
+        data = getCurrentData();
+    }
+    
+    if (!data || !data.price) {
+        return null;
+    }
+    
+    // Create URL with individual parameters
+    const params = new URLSearchParams();
+    params.append('price', data.price);
+    if (data.category) params.append('category', data.category);
+    if (data.uses) params.append('uses', data.uses);
+    if (data.originalPrice) params.append('originalPrice', data.originalPrice);
+    if (data.income) params.append('income', data.income);
+    if (data.budgetPercent) params.append('budgetPercent', data.budgetPercent);
+    
+    // Generate URL - point to verdict.html
+    const currentPath = window.location.pathname;
+    let basePath = '/verdict.html';
+    
+    // If we're in a subdirectory, preserve it
+    if (currentPath.includes('/') && currentPath !== '/') {
+        const pathParts = currentPath.split('/');
+        pathParts[pathParts.length - 1] = 'verdict.html';
+        basePath = pathParts.join('/');
+    }
+    
+    const baseUrl = window.location.origin + basePath;
+    return `${baseUrl}?${params.toString()}`;
+}
+
+// Scroll to calculator screen output with current form data
+function navigateToResults() {
+    const form = document.getElementById('girlMathForm');
+    if (!form) return;
+    
+    // Get current form data
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    
+    // Validate required fields (price and category are required)
+    if (!data.price || !data.price.trim() || parseFloat(data.price) <= 0) {
+        alert('Please enter a valid price before viewing results.');
+        const priceInput = form.querySelector('#price');
+        if (priceInput) priceInput.focus();
+        return;
+    }
+    
+    if (!data.category || !data.category.trim()) {
+        alert('Please select a category before viewing results.');
+        const categorySelect = form.querySelector('#category');
+        if (categorySelect) categorySelect.focus();
+        return;
+    }
+    
+    // Ensure calculation is up to date
+    updateVerdictLive();
+    
+    // Scroll to calculator screen output
+    setTimeout(() => {
+        const screen = document.getElementById('calculatorScreen');
+        if (screen) {
+            screen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 100);
 }
 
 // Helper function to generate shareable URL
