@@ -10,7 +10,7 @@ yarn-error.log*
 .env.*.local
 
 # Vercel
-.vercel
+
 
 # IDE
 .vscode/
@@ -22,3 +22,4 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+.vercel

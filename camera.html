@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Girl Math ✨ - Product Scanner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-decorations" aria-hidden="true">
+        <span class="decor decor-1">✨</span>
+        <span class="decor decor-2">💖</span>
+        <span class="decor decor-3">🍬</span>
+        <span class="decor decor-4">🎀</span>
+        <span class="decor decor-5">📎</span>
+        <span class="decor decor-6">⭐</span>
+        <span class="decor decor-7">🍭</span>
+        <span class="decor decor-8">🌸</span>
+        <span class="decor decor-9">✨</span>
+        <span class="decor decor-10">🎀</span>
+        <span class="decor decor-11">💖</span>
+        <span class="decor decor-12">🍬</span>
+        <span class="decor decor-13">📎</span>
+        <span class="decor decor-14">🦋</span>
+        <span class="decor decor-15">💫</span>
+        <span class="decor decor-16">🍦</span>
+        <span class="decor decor-17">🎈</span>
+        <span class="decor decor-18">🧁</span>
+        <span class="decor decor-19">🎀</span>
+        <span class="decor decor-20">🌈</span>
+        <span class="decor decor-21">🍓</span>
+        <span class="decor decor-22">💄</span>
+        <span class="decor decor-23">👛</span>
+        <span class="decor decor-24">💍</span>
+        <span class="decor decor-25">💅</span>
+        <span class="decor decor-26">💖</span>
+        <span class="decor decor-27">✨</span>
+        <span class="decor decor-28">🍭</span>
+        <span class="decor decor-29">🎀</span>
+        <span class="decor decor-30">🌸</span>
+    </div>
+    <div class="container">
+        <header>
+            <h1 class="title"><span class="sparkle-v" aria-hidden="true">✨</span>Girl Math Scanner <span class="sparkle">✨</span></h1>
+            <p class="subtitle">Snap a photo, get a price estimate</p>
+            <nav class="tabs-nav" style="margin-top: 15px;">
+                <a href="index.html" class="tab-link">Calculator</a>
+                <a href="camera.html" class="tab-link active">Scanner</a>
+            </nav>
+        </header>
+
+        <div class="calculator-body">
+            <!-- Camera Screen -->
+            <div class="calculator-screen camera-screen" id="cameraScreen">
+                <div class="camera-container" id="cameraContainer">
+                    <video id="videoElement" autoplay playsinline style="display: none;"></video>
+                    <canvas id="canvasElement" style="display: none;"></canvas>
+                    <div class="camera-placeholder" id="cameraPlaceholder">
+                        <div class="camera-icon">📷</div>
+                        <p class="camera-placeholder-text">Tap to start camera</p>
+                    </div>
+                    <img id="capturedImage" class="captured-image" style="display: none;" alt="Captured product">
+                    <div class="camera-controls" id="cameraControls" style="display: none;">
+                        <button type="button" class="camera-btn capture-btn" id="captureBtn">Capture</button>
+                        <button type="button" class="camera-btn retake-btn" id="retakeBtn" style="display: none;">Retake</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scanner Results Section -->
+            <div class="calculator-keypad">
+                <div class="keypad-grid">
+                    <!-- Loading Indicator -->
+                    <div class="keypad-key keypad-key-full" id="loadingIndicator" style="display: none;">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <p class="loading-text">Identifying product...</p>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div class="keypad-key keypad-key-full" id="errorMessage" style="display: none;">
+                        <div class="error-container">
+                            <p class="error-text"></p>
+                        </div>
+                    </div>
+
+                    <!-- Scanner Results Container -->
+                    <div class="keypad-key keypad-key-full" id="scannerResults" style="display: none;">
+                        <!-- Result Header -->
+                        <div class="scanner-result-header" id="resultHeader">
+                            <span class="result-header-text">Looks like...</span>
+                        </div>
+
+                        <!-- Primary Result (status=ok) -->
+                        <div class="scanner-primary-result" id="primaryResult" style="display: none;">
+                            <div class="primary-product-name" id="primaryProductName"></div>
+                            <div class="primary-price-range" id="primaryPriceRange"></div>
+                            <p class="primary-assumptions" id="primaryAssumptions"></p>
+                            
+                            <!-- Other close matches (expandable) -->
+                            <details class="other-matches" id="otherMatches">
+                                <summary class="other-matches-summary">Other close matches</summary>
+                                <div class="other-matches-list" id="otherMatchesList"></div>
+                            </details>
+                        </div>
+
+                        <!-- Disambiguation View (status=needs_disambiguation) -->
+                        <div class="scanner-disambiguation" id="disambiguationView" style="display: none;">
+                            <p class="disambiguation-prompt" id="disambiguationPrompt">Pick the closest match:</p>
+                            
+                            <!-- Candidate Cards -->
+                            <div class="candidate-cards" id="candidateCards"></div>
+                            
+                            <!-- Quick Pick Options (for phones etc) -->
+                            <div class="quick-pick-options" id="quickPickOptions" style="display: none;">
+                                <p class="quick-pick-label" id="quickPickLabel"></p>
+                                <div class="quick-pick-buttons" id="quickPickButtons"></div>
+                            </div>
+                            
+                            <p class="disambiguation-hint" id="disambiguationHint"></p>
+                        </div>
+
+                        <!-- Needs More Info View (status=needs_more_info) -->
+                        <div class="scanner-needs-info" id="needsInfoView" style="display: none;">
+                            <p class="needs-info-text">📸 Not enough signal from this photo</p>
+                            <p class="needs-info-subtext">The image is too blurry or unclear to identify the product confidently.</p>
+                            
+                            <div class="needs-info-actions">
+                                <button type="button" class="action-btn secondary" id="retakePhotoBtn">
+                                    📷 Retake Photo
+                                </button>
+                                <button type="button" class="action-btn secondary" id="manualCategoryBtn">
+                                    📝 Choose Category Manually
+                                </button>
+                            </div>
+                            
+                            <!-- Manual Category Selector -->
+                            <div class="manual-category-selector" id="manualCategorySelector" style="display: none;">
+                                <label for="manualCategory" class="key-label">Select a category:</label>
+                                <select id="manualCategory" class="key-select">
+                                    <option value="">Choose...</option>
+                                    <option value="phone">📱 Phone</option>
+                                    <option value="jewellery">💍 Jewelry</option>
+                                    <option value="bag">👜 Bag</option>
+                                    <option value="shoes">👟 Shoes</option>
+                                    <option value="clothes">👗 Clothing</option>
+                                    <option value="skincare">💄 Skincare</option>
+                                    <option value="electronics">🔌 Electronics</option>
+                                    <option value="other">💫 Other</option>
+                                </select>
+                                <button type="button" class="action-btn primary" id="submitManualCategory" style="margin-top: 10px;">
+                                    Get Price Estimate
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Selected Result Display (after user picks) -->
+                        <div class="scanner-selected-result" id="selectedResult" style="display: none;">
+                            <div class="selected-badge">✓ Selected</div>
+                            <div class="selected-product-name" id="selectedProductName"></div>
+                            <div class="selected-price-range" id="selectedPriceRange"></div>
+                            <p class="selected-assumptions" id="selectedAssumptions"></p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="keypad-key keypad-key-full">
+                        <div class="results-share">
+                            <button type="button" onclick="window.location.reload()" class="action-btn secondary">Start Over</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+            Standalone scanner for price estimation. Not connected to Girl Math Calculator.
+        </footer>
+    </div>
+    <script src="scanner.js"></script>
+    <script src="camera.js"></script>
+</body>
+</html>
