@@ -8,13 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-    <!-- Video Background -->
-    <div class="video-background" aria-hidden="true">
-        <video autoplay muted loop playsinline>
-            <source src="/public/videos/hero-background.mp4" type="video/mp4">
-        </video>
-        <div class="bg-radial-vignette"></div>
-    </div>
     <!-- Hidden ShareableCard for image generation -->
     <div id="shareableCard" class="shareable-card" style="display: none;">
         <div class="shareable-card-content">
@@ -44,14 +37,6 @@
         </div>
     </div>
     <div class="container verdict-container">
-        <header>
-            <h1 class="title"><span class="sparkle-v" aria-hidden="true">✨</span>Girl Math Verdict <span class="sparkle">✨</span></h1>
-            <p class="subtitle">Your purchase justification</p>
-            <nav class="tabs-nav" style="margin-top: 15px;">
-                <a href="index.html" class="tab-link">Scanner</a>
-                <a href="calculator.html" class="tab-link active">Calculator</a>
-            </nav>
-        </header>
         <div class="verdict-card" id="verdictCard">
             <div class="card-header">
                 <div class="context-pills" id="contextPills">
@@ -87,7 +72,7 @@
 
         <div class="actions">
             <button onclick="copyLink()" class="action-btn secondary">Share Result</button>
-            <a href="calculator.html" class="action-btn secondary">Start Over</a>
+            <a href="index.html" class="action-btn secondary">Start Over</a>
         </div>
         <footer class="footer">
             Built as a lightweight consumer decision tool. Not financial advice.
@@ -140,8 +125,8 @@
             if (data) {
                 generateVerdict(data);
             } else {
-                // Redirect to calculator if no data
-                window.location.href = 'calculator.html';
+                // Redirect to home if no data
+                window.location.href = 'index.html';
             }
         });
     </script>

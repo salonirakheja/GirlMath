@@ -471,18 +471,6 @@ function calculateMetrics(data) {
 }
 
 // Validation Checks (Development Only)
-// Update slider background to show brown on the left side
-function updateSliderBackground(slider) {
-    if (!slider) return;
-    const value = parseInt(slider.value);
-    const min = parseInt(slider.min) || 5;
-    const max = parseInt(slider.max) || 25;
-    const percentage = ((value - min) / (max - min)) * 100;
-    
-    // Create gradient: brown up to percentage, then muted color
-    slider.style.background = `linear-gradient(to right, hsl(var(--mocha)) 0%, hsl(var(--mocha)) ${percentage}%, hsl(var(--muted)) ${percentage}%, hsl(var(--muted)) 100%)`;
-}
-
 function runSelfChecks() {
     console.log("--- Girl Math Logic Self-Checks ---");
     
@@ -729,7 +717,7 @@ function applyWhatIfScenario(updates) {
         if (updatedData.uses) params.append('uses', updatedData.uses);
         if (updatedData.originalPrice) params.append('originalPrice', updatedData.originalPrice);
         
-        window.location.href = `calculator.html?${params.toString()}`;
+        window.location.href = `index.html?${params.toString()}`;
         return;
     }
     
@@ -1032,19 +1020,12 @@ function updateVerdictLive() {
     if (vibeLabel) {
         if (data.skipVibe || !data.budgetPercent) {
             vibeLabel.textContent = 'Not selected';
-            if (budgetSlider) {
-                budgetSlider.disabled = true;
-                budgetSlider.style.background = '';
-                budgetSlider.style.backgroundImage = '';
-            }
+            if (budgetSlider) budgetSlider.disabled = true;
         } else {
             const percent = parseInt(data.budgetPercent);
             const label = vibeLabels[percent] || 'Balanced';
             vibeLabel.textContent = `${label} (${percent}%)`;
-            if (budgetSlider) {
-                budgetSlider.disabled = false;
-                updateSliderBackground(budgetSlider);
-            }
+            if (budgetSlider) budgetSlider.disabled = false;
         }
     }
     
@@ -1216,26 +1197,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const budgetSlider = form.querySelector('#budgetPercent');
         const vibeLabel = document.getElementById('vibeLabel');
         
-        // Initialize slider background on page load
-        if (budgetSlider && !skipVibeCheckbox?.checked) {
-            updateSliderBackground(budgetSlider);
-        }
-        
         if (skipVibeCheckbox && budgetSlider && vibeLabel) {
             // Handle skip checkbox change
             skipVibeCheckbox.addEventListener('change', function() {
                 if (this.checked) {
                     budgetSlider.disabled = true;
                     vibeLabel.textContent = 'Not selected';
-                    // Reset slider background to default (no brown fill) when disabled
-                    budgetSlider.style.background = '';
-                    budgetSlider.style.backgroundImage = '';
                 } else {
                     budgetSlider.disabled = false;
                     const percent = parseInt(budgetSlider.value);
                     const label = vibeLabels[percent] || 'Balanced';
                     vibeLabel.textContent = `${label} (${percent}%)`;
-                    updateSliderBackground(budgetSlider);
                 }
                 debounceUpdateVerdict();
             });
@@ -1246,7 +1218,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const percent = parseInt(this.value);
                     const label = vibeLabels[percent] || 'Balanced';
                     vibeLabel.textContent = `${label} (${percent}%)`;
-                    updateSliderBackground(this);
                     debounceUpdateVerdict();
                 }
             });
@@ -1390,14 +1361,14 @@ function generateShareableUrl(data) {
     if (data.income) params.append('income', data.income);
     if (data.budgetPercent) params.append('budgetPercent', data.budgetPercent);
     
-    // Generate URL - always point to calculator.html
+    // Generate URL - always point to index.html
     const currentPath = window.location.pathname;
-    let basePath = '/calculator.html';
+    let basePath = '/index.html';
     
     // If we're in a subdirectory, preserve it
     if (currentPath.includes('/') && currentPath !== '/') {
         const pathParts = currentPath.split('/');
-        pathParts[pathParts.length - 1] = 'calculator.html';
+        pathParts[pathParts.length - 1] = 'index.html';
         basePath = pathParts.join('/');
     }
     
