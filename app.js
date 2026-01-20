@@ -107,9 +107,7 @@ const categoryDefaultUses = {
 // Helper to normalize and cap uses
 function normalizeUses(uses) {
     const parsed = parseInt(uses);
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/7e890f55-d8f9-472f-9f88-eff2b6294469',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:normalizeUses',message:'normalizeUses called',data:{inputUses:uses,parsed:parsed,willReturnNull:isNaN(parsed)||parsed<=0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H5'})}).catch(()=>{});
-    // #endregion
+    // Removed debug endpoint call for security
     if (isNaN(parsed) || parsed <= 0) return null;
     return Math.min(Math.round(parsed), 120);
 }
@@ -307,14 +305,10 @@ function calculateMetrics(data) {
     if (!metrics.usesProvided || normalizedUsesValue === null) {
         breakdown.costPerUse.points = 0;
         breakdown.costPerUse.rationale = 'Cost per use cannot be calculated without usage information.';
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/7e890f55-d8f9-472f-9f88-eff2b6294469',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:costPerUse:null',message:'CPU scoring - null branch',data:{normalizedUsesValue:normalizedUsesValue,usesProvided:metrics.usesProvided,points:0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H4'})}).catch(()=>{});
-        // #endregion
+        // Removed debug endpoint call for security
     } else {
         const cpuValue = metrics.price / normalizedUsesValue;
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/7e890f55-d8f9-472f-9f88-eff2b6294469',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:costPerUse:calc',message:'CPU scoring - calculated',data:{normalizedUsesValue:normalizedUsesValue,price:metrics.price,cpuValue:cpuValue},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-        // #endregion
+        // Removed debug endpoint call for security
         if (cpuValue < 1) {
             breakdown.costPerUse.points = 35;
             breakdown.costPerUse.rationale = 'Excellent cost-per-use - under $1 per use!';
@@ -445,9 +439,7 @@ function calculateMetrics(data) {
     metrics.categoryBonus = breakdown.categoryBonus.points;
     metrics.score = finalScore;
     
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/7e890f55-d8f9-472f-9f88-eff2b6294469',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:calculateMetrics:final',message:'Final score breakdown',data:{finalScore:finalScore,baseScore:baseScore,cpuPoints:breakdown.costPerUse.points,pricePoints:breakdown.priceThreshold.points,budgetPoints:breakdown.budgetImpact.points,discountPoints:breakdown.discountSale.points,categoryBonus:breakdown.categoryBonus.points,usesProvided:metrics.usesProvided,normalizedUses:metrics.uses},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2,H3,H4'})}).catch(()=>{});
-    // #endregion
+    // Removed debug endpoint call for security
     
     // Determine final verdict
     if (finalScore >= 70) {
@@ -866,16 +858,26 @@ function generateVerdict(data) {
     // Generate context pills
     const pillsEl = document.getElementById('contextPills');
     if (pillsEl && data.category) {
-    const categoryNamesForPills = {
-        clothes: 'Clothing 👗',
-        skincare: 'Skincare 💆',
-        food: 'Food 🍕',
-        subscription: 'Subscription 📱',
-        gift: 'Gift 🎁',
-        jewellery: 'Jewellery 💍',
-        other: 'Other 💫'
-    };
-        pillsEl.innerHTML = `<span class="context-pill">${categoryNamesForPills[data.category] || data.category}</span>`;
+        const categoryNamesForPills = {
+            clothes: 'Clothing 👗',
+            skincare: 'Skincare 💆',
+            food: 'Food 🍕',
+            subscription: 'Subscription 📱',
+            gift: 'Gift 🎁',
+            jewellery: 'Jewellery 💍',
+            other: 'Other 💫'
+        };
+        // Sanitize category input - only allow predefined categories
+        const allowedCategories = Object.keys(categoryNamesForPills);
+        const safeCategory = allowedCategories.includes(data.category) ? data.category : 'other';
+        const pillText = categoryNamesForPills[safeCategory] || 'Other 💫';
+        
+        // Use textContent instead of innerHTML for safety
+        const pillSpan = document.createElement('span');
+        pillSpan.className = 'context-pill';
+        pillSpan.textContent = pillText;
+        pillsEl.innerHTML = '';
+        pillsEl.appendChild(pillSpan);
     }
     
     // Update stamp
@@ -885,39 +887,44 @@ function generateVerdict(data) {
         stampEl.className = `stamp ${metrics.verdict}`;
     }
     
-    // Generate score display
+    // Generate score display - sanitize score value
     const confidenceEl = document.getElementById('confidenceMeter');
     if (confidenceEl && metrics.score !== undefined) {
+        const score = Math.max(0, Math.min(100, Math.round(parseFloat(metrics.score) || 0)));
+        const verdictMessage = String(metrics.verdictInfo?.message || '').replace(/[<>]/g, '');
+        
         confidenceEl.innerHTML = `
             <div class="confidence-label">Girl Math Score</div>
-            <div class="confidence-value">${metrics.score}/100</div>
+            <div class="confidence-value">${score}/100</div>
             <div class="confidence-bar-container">
-                <div class="confidence-bar" style="width: ${metrics.score}%"></div>
+                <div class="confidence-bar" style="width: ${score}%"></div>
             </div>
-            <div class="verdict-message">${metrics.verdictInfo.message}</div>
+            <div class="verdict-message">${verdictMessage}</div>
         `;
     }
     
-    // Generate community insights section
+    // Generate community insights section - sanitize insight text
     const insightsEl = document.getElementById('communityInsights');
     if (insightsEl) {
         const insight = generateCommunityInsight(metrics);
+        const safeInsight = String(insight || '').replace(/[<>]/g, '');
         insightsEl.innerHTML = `
             <h3>Community Insights</h3>
-            <div class="insight-text">${insight}</div>
+            <div class="insight-text">${safeInsight}</div>
         `;
     }
     
-    // Generate key metrics display
+    // Generate key metrics display - sanitize all numeric values
     const metricsEl = document.getElementById('metrics');
     if (metricsEl) {
         let metricsHTML = '';
         
         // Show cost per use if available, otherwise show N/A
         if (metrics.costPerUse !== null && metrics.costPerUse !== undefined) {
+            const costPerUse = Math.max(0, parseFloat(metrics.costPerUse) || 0);
             metricsHTML += `<div class="metric-line">
                 <span class="metric-label">Cost per use:</span>
-                <span class="metric-value">$${metrics.costPerUse.toFixed(2)}</span>
+                <span class="metric-value">$${costPerUse.toFixed(2)}</span>
             </div>`;
         } else {
             metricsHTML += `<div class="metric-line">
@@ -927,17 +934,20 @@ function generateVerdict(data) {
         }
         
         if (metrics.savings > 0) {
+            const savings = Math.max(0, parseFloat(metrics.savings) || 0);
+            const discountPercent = Math.max(0, Math.min(100, parseFloat(metrics.discountPercent) || 0));
             metricsHTML += `<div class="metric-line">
                 <span class="metric-label">Savings:</span>
-                <span class="metric-value">$${metrics.savings.toFixed(2)} (${metrics.discountPercent.toFixed(0)}% off)</span>
+                <span class="metric-value">$${savings.toFixed(2)} (${discountPercent.toFixed(0)}% off)</span>
             </div>`;
         }
         
         // Show budget percentage (price as % of vibe budget) - only if baseline was provided
         if (metrics.budgetPercentOfVibe !== null && metrics.budgetPercentOfVibe !== undefined) {
+            const budgetPercent = Math.max(0, Math.min(1000, parseFloat(metrics.budgetPercentOfVibe) || 0));
             metricsHTML += `<div class="metric-line">
                 <span class="metric-label">% of monthly budget:</span>
-                <span class="metric-value">${metrics.budgetPercentOfVibe.toFixed(1)}%</span>
+                <span class="metric-value">${budgetPercent.toFixed(1)}%</span>
             </div>`;
         }
         
@@ -960,16 +970,21 @@ function generateVerdict(data) {
             window.whatIfScenarios = scenarios;
             
             const scenariosHTML = scenarios.map((scenario, index) => {
-                const verdictClass = scenario.newScore >= 80 ? 'approved' :
-                                    scenario.newScore >= 60 ? 'justified' :
-                                    scenario.newScore >= 40 ? 'questionable' : 'denied';
+                const newScore = Math.max(0, Math.min(100, Math.round(parseFloat(scenario.newScore) || 0)));
+                const verdictClass = newScore >= 80 ? 'approved' :
+                                    newScore >= 60 ? 'justified' :
+                                    newScore >= 40 ? 'questionable' : 'denied';
+                
+                // Sanitize description and verdict text
+                const safeDescription = String(scenario.description || '').replace(/[<>]/g, '');
+                const safeVerdict = String(scenario.newVerdict || '').replace(/[<>]/g, '');
                 
                 return `
                     <div class="what-if-scenario" data-scenario-index="${index}">
-                        <div class="what-if-description">${scenario.description}</div>
+                        <div class="what-if-description">${safeDescription}</div>
                         <div class="what-if-result">
-                            <span class="what-if-score">Your new score would be: ${scenario.newScore}/100</span>
-                            <span class="what-if-verdict ${verdictClass}">${scenario.newVerdict}</span>
+                            <span class="what-if-score">Your new score would be: ${newScore}/100</span>
+                            <span class="what-if-verdict ${verdictClass}">${safeVerdict}</span>
                         </div>
                     </div>
                 `;
@@ -1160,12 +1175,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (urlParams.has('price') || urlParams.has('data')) {
             // New format: individual parameters
             if (urlParams.has('price')) {
-                sharedData.price = urlParams.get('price');
-                sharedData.category = urlParams.get('category') || '';
-                sharedData.uses = urlParams.get('uses') || '';
-                sharedData.originalPrice = urlParams.get('originalPrice') || urlParams.get('listPrice') || '';
-                sharedData.income = urlParams.get('income') || '';
-                sharedData.budgetPercent = urlParams.get('budgetPercent') || '';
+                // Validate and sanitize URL parameters
+                const rawData = {
+                    price: urlParams.get('price'),
+                    category: urlParams.get('category') || '',
+                    uses: urlParams.get('uses') || '',
+                    originalPrice: urlParams.get('originalPrice') || urlParams.get('listPrice') || '',
+                    income: urlParams.get('income') || '',
+                    budgetPercent: urlParams.get('budgetPercent') || ''
+                };
+                
+                // Validate all parameters
+                const validated = validateUrlParams(rawData);
+                sharedData = validated;
             } 
             // Old format: data parameter (JSON)
             else if (urlParams.has('data')) {
@@ -1371,6 +1393,51 @@ function navigateToResults() {
     }, 100);
 }
 
+// Allowed income ranges for validation
+const ALLOWED_INCOME_RANGES = ['under30', '30to60', '60to100', '100to200', 'over200'];
+const ALLOWED_BUDGET_PERCENTS = ['5', '10', '15', '20', '25'];
+
+// Validate and sanitize URL parameters
+function validateUrlParams(data) {
+    const safe = {};
+    
+    // Validate price
+    const price = parseFloat(data.price);
+    if (!isNaN(price) && price > 0 && price <= 1000000) {
+        safe.price = price.toString();
+    }
+    
+    // Validate category
+    const allowedCategories = ['clothes', 'skincare', 'food', 'subscription', 'gift', 'jewellery', 'other'];
+    if (data.category && allowedCategories.includes(data.category)) {
+        safe.category = data.category;
+    }
+    
+    // Validate uses
+    const uses = parseInt(data.uses);
+    if (!isNaN(uses) && uses > 0 && uses <= 10000) {
+        safe.uses = uses.toString();
+    }
+    
+    // Validate originalPrice
+    const originalPrice = parseFloat(data.originalPrice);
+    if (!isNaN(originalPrice) && originalPrice > 0 && originalPrice <= 1000000) {
+        safe.originalPrice = originalPrice.toString();
+    }
+    
+    // Validate income (must be from allowed list)
+    if (data.income && ALLOWED_INCOME_RANGES.includes(data.income)) {
+        safe.income = data.income;
+    }
+    
+    // Validate budgetPercent (must be from allowed list)
+    if (data.budgetPercent && ALLOWED_BUDGET_PERCENTS.includes(data.budgetPercent.toString())) {
+        safe.budgetPercent = data.budgetPercent.toString();
+    }
+    
+    return safe;
+}
+
 // Helper function to generate shareable URL
 function generateShareableUrl(data) {
     if (!data) {
@@ -1381,14 +1448,17 @@ function generateShareableUrl(data) {
         return null;
     }
     
+    // Validate and sanitize all parameters before adding to URL
+    const safeData = validateUrlParams(data);
+    
     // Create URL with individual parameters for easy sharing
     const params = new URLSearchParams();
-    params.append('price', data.price);
-    if (data.category) params.append('category', data.category);
-    if (data.uses) params.append('uses', data.uses);
-    if (data.originalPrice) params.append('originalPrice', data.originalPrice);
-    if (data.income) params.append('income', data.income);
-    if (data.budgetPercent) params.append('budgetPercent', data.budgetPercent);
+    if (safeData.price) params.append('price', safeData.price);
+    if (safeData.category) params.append('category', safeData.category);
+    if (safeData.uses) params.append('uses', safeData.uses);
+    if (safeData.originalPrice) params.append('originalPrice', safeData.originalPrice);
+    if (safeData.income) params.append('income', safeData.income);
+    if (safeData.budgetPercent) params.append('budgetPercent', safeData.budgetPercent);
     
     // Generate URL - always point to calculator.html
     const currentPath = window.location.pathname;

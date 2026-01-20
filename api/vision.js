@@ -91,11 +91,27 @@ async function setCachedResult(cacheKey, result) {
     }
 }
 
+// Maximum image size: 10MB base64 encoded (approximately 7.5MB raw)
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
 export default async function handler(req, res) {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Get origin for CORS - restrict to allowed origins
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+        process.env.ALLOWED_ORIGINS?.split(',') || [],
+        req.headers.host ? `https://${req.headers.host}` : null
+    ].flat().filter(Boolean);
+    
+    // Set CORS headers - restrict to allowed origins
+    if (origin && allowedOrigins.some(allowed => origin === allowed || origin.endsWith(allowed))) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else if (!origin && req.headers.host) {
+        res.setHeader('Access-Control-Allow-Origin', `https://${req.headers.host}`);
+    }
+    
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400');
 
     // Handle OPTIONS request for CORS preflight
     if (req.method === 'OPTIONS') {
@@ -107,10 +123,38 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Check content type
+    const contentType = req.headers['content-type'];
+    if (!contentType || !contentType.includes('application/json')) {
+        return res.status(400).json({ error: 'Content-Type must be application/json' });
+    }
+
+    // Check request body size limit
+    if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ error: 'Invalid request body' });
+    }
+
+    const bodySize = JSON.stringify(req.body).length;
+    if (bodySize > MAX_IMAGE_SIZE) {
+        return res.status(413).json({ error: 'Image too large. Maximum size is 10MB' });
+    }
+
     const { imageDataUrl } = req.body;
 
-    if (!imageDataUrl) {
+    if (!imageDataUrl || typeof imageDataUrl !== 'string') {
         return res.status(400).json({ error: 'Image data URL is required' });
+    }
+
+    // Validate data URL format
+    if (!imageDataUrl.match(/^data:image\/(jpeg|jpg|png|webp);base64,/i)) {
+        return res.status(400).json({ error: 'Invalid image format. Only JPEG, PNG, and WebP are supported' });
+    }
+
+    // Check image size
+    const base64Data = imageDataUrl.split(',')[1] || '';
+    const imageSize = base64Data.length;
+    if (imageSize > MAX_IMAGE_SIZE) {
+        return res.status(413).json({ error: 'Image too large. Maximum size is 10MB' });
     }
 
     // Generate cache key from image hash
@@ -248,10 +292,11 @@ Remember: Brand detection is your TOP PRIORITY. A Cartier bracelet should NEVER 
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error('OpenAI API error:', response.status, errorData);
-            return res.status(response.status).json({ 
-                error: 'OpenAI API error',
-                details: errorData.error?.message || 'Failed to process image'
+            // Don't expose internal API error details
+            console.error('OpenAI API error:', response.status);
+            return res.status(500).json({ 
+                error: 'Failed to process image',
+                message: 'Please try again with a clearer image'
             });
         }
 
@@ -277,10 +322,11 @@ Remember: Brand detection is your TOP PRIORITY. A Cartier bracelet should NEVER 
         return res.status(200).json(normalizedResponse);
 
     } catch (error) {
-        console.error('Error processing vision request:', error);
+        // Don't expose internal error details
+        console.error('Error processing vision request:', error.message);
         return res.status(500).json({ 
             error: 'Internal server error',
-            message: error.message || 'Failed to process image'
+            message: 'Failed to process image. Please try again.'
         });
     }
 }

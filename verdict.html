@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Girl Math Verdict ✨</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-N4f7z2E1UPZZO3yTSXL4j7uFiR8qU5y4lTaLH3kfgvO5U6n3q7X9Yv1+9K7K3+5v8Y7lGHFqMWiT9O7Obx4X+g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
     <!-- Video Background -->
@@ -104,7 +104,12 @@
             if (params.has('price') || params.has('data')) {
                 // New format: individual parameters
                 if (params.has('price')) {
-                    data = {
+                    // Validate and sanitize URL parameters (using same validation as app.js)
+                    const ALLOWED_INCOME_RANGES = ['under30', '30to60', '60to100', '100to200', 'over200'];
+                    const ALLOWED_BUDGET_PERCENTS = ['5', '10', '15', '20', '25'];
+                    const allowedCategories = ['clothes', 'skincare', 'food', 'subscription', 'gift', 'jewellery', 'other'];
+                    
+                    const rawData = {
                         price: params.get('price'),
                         category: params.get('category') || '',
                         uses: params.get('uses') || '',
@@ -113,6 +118,41 @@
                         income: params.get('income') || '',
                         budgetPercent: params.get('budgetPercent') || ''
                     };
+                    
+                    // Validate all parameters
+                    data = {};
+                    
+                    const price = parseFloat(rawData.price);
+                    if (!isNaN(price) && price > 0 && price <= 1000000) {
+                        data.price = price.toString();
+                    }
+                    
+                    if (rawData.category && allowedCategories.includes(rawData.category)) {
+                        data.category = rawData.category;
+                    }
+                    
+                    const uses = parseInt(rawData.uses);
+                    if (!isNaN(uses) && uses > 0 && uses <= 10000) {
+                        data.uses = uses.toString();
+                    }
+                    
+                    const originalPrice = parseFloat(rawData.originalPrice);
+                    if (!isNaN(originalPrice) && originalPrice > 0 && originalPrice <= 1000000) {
+                        data.originalPrice = originalPrice.toString();
+                    }
+                    
+                    if (rawData.income && ALLOWED_INCOME_RANGES.includes(rawData.income)) {
+                        data.income = rawData.income;
+                    }
+                    
+                    if (rawData.budgetPercent && ALLOWED_BUDGET_PERCENTS.includes(rawData.budgetPercent)) {
+                        data.budgetPercent = rawData.budgetPercent;
+                    }
+                    
+                    const discountPercent = parseFloat(rawData.discountPercent);
+                    if (!isNaN(discountPercent) && discountPercent >= 0 && discountPercent <= 100) {
+                        data.discountPercent = discountPercent.toString();
+                    }
                 } 
                 // Old format: data parameter (JSON)
                 else if (params.has('data')) {

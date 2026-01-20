@@ -269,9 +269,13 @@ function displayOkResult(result) {
     const assumptionsEl = document.getElementById('primaryAssumptions');
     
     if (productNameEl) {
-        productNameEl.textContent = topCandidate.name;
+        // Sanitize candidate data to prevent XSS
+        const safeName = String(topCandidate.name || '').replace(/[<>]/g, '');
         if (topCandidate.brand) {
-            productNameEl.innerHTML = `<span class="brand-name">${topCandidate.brand}</span> ${topCandidate.name}`;
+            const safeBrand = String(topCandidate.brand || '').replace(/[<>]/g, '');
+            productNameEl.innerHTML = `<span class="brand-name">${safeBrand}</span> ${safeName}`;
+        } else {
+            productNameEl.textContent = safeName;
         }
     }
     
@@ -288,12 +292,19 @@ function displayOkResult(result) {
     const otherMatchesListEl = document.getElementById('otherMatchesList');
     
     if (otherMatchesEl && otherMatchesListEl && otherCandidates.length > 0) {
-        otherMatchesListEl.innerHTML = otherCandidates.map(candidate => `
-            <div class="other-match-item" data-candidate='${JSON.stringify(candidate)}'>
-                <div class="other-match-name">${candidate.name}</div>
-                <div class="other-match-price">${formatPriceRange(candidate.priceRange)}</div>
-            </div>
-        `).join('');
+        // Sanitize candidate data before creating HTML
+        otherMatchesListEl.innerHTML = otherCandidates.map(candidate => {
+            const safeName = String(candidate.name || '').replace(/[<>]/g, '');
+            const safePriceRange = formatPriceRange(candidate.priceRange);
+            // Escape JSON for data attribute
+            const safeJson = JSON.stringify(candidate).replace(/"/g, '&quot;');
+            return `
+                <div class="other-match-item" data-candidate='${safeJson}'>
+                    <div class="other-match-name">${safeName}</div>
+                    <div class="other-match-price">${safePriceRange}</div>
+                </div>
+            `;
+        }).join('');
         
         otherMatchesEl.style.display = 'block';
         
@@ -328,21 +339,30 @@ function displayDisambiguationResult(result) {
         promptEl.textContent = result.followup.prompt;
     }
     
-    // Generate candidate cards
+    // Generate candidate cards - sanitize all user data
     if (candidateCardsEl) {
-        candidateCardsEl.innerHTML = result.candidates.map((candidate, index) => `
-            <div class="candidate-card" data-index="${index}" data-candidate='${JSON.stringify(candidate)}'>
-                <div class="candidate-card-header">
-                    ${candidate.brand ? `<span class="candidate-brand">${candidate.brand}</span>` : ''}
-                    <span class="candidate-name">${candidate.name}</span>
+        candidateCardsEl.innerHTML = result.candidates.map((candidate, index) => {
+            const safeName = String(candidate.name || '').replace(/[<>]/g, '');
+            const safeBrand = candidate.brand ? String(candidate.brand).replace(/[<>]/g, '') : '';
+            const safePriceRange = formatPriceRange(candidate.priceRange);
+            const confidencePercent = Math.max(0, Math.min(100, Math.round((parseFloat(candidate.confidence) || 0) * 100)));
+            // Escape JSON for data attribute
+            const safeJson = JSON.stringify(candidate).replace(/"/g, '&quot;');
+            
+            return `
+                <div class="candidate-card" data-index="${index}" data-candidate='${safeJson}'>
+                    <div class="candidate-card-header">
+                        ${safeBrand ? `<span class="candidate-brand">${safeBrand}</span>` : ''}
+                        <span class="candidate-name">${safeName}</span>
+                    </div>
+                    <div class="candidate-card-price">${safePriceRange}</div>
+                    <div class="candidate-card-confidence">
+                        <div class="confidence-indicator" style="width: ${confidencePercent}%"></div>
+                    </div>
+                    <button type="button" class="candidate-select-btn">Select</button>
                 </div>
-                <div class="candidate-card-price">${formatPriceRange(candidate.priceRange)}</div>
-                <div class="candidate-card-confidence">
-                    <div class="confidence-indicator" style="width: ${Math.round(candidate.confidence * 100)}%"></div>
-                </div>
-                <button type="button" class="candidate-select-btn">Select</button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         // Add click handlers
         candidateCardsEl.querySelectorAll('.candidate-card').forEach(card => {
@@ -412,9 +432,13 @@ function selectCandidate(candidate) {
         const assumptionsEl = document.getElementById('selectedAssumptions');
         
         if (nameEl) {
-            nameEl.textContent = candidate.name;
+            // Sanitize candidate data to prevent XSS
+            const safeName = String(candidate.name || '').replace(/[<>]/g, '');
             if (candidate.brand) {
-                nameEl.innerHTML = `<span class="brand-name">${candidate.brand}</span> ${candidate.name}`;
+                const safeBrand = String(candidate.brand || '').replace(/[<>]/g, '');
+                nameEl.innerHTML = `<span class="brand-name">${safeBrand}</span> ${safeName}`;
+            } else {
+                nameEl.textContent = safeName;
             }
         }
         

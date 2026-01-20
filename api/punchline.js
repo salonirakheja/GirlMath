@@ -1,11 +1,80 @@
 // Vercel Serverless Function for AI-enhanced punchlines
 // Falls back to template-based generation if AI_API_KEY is not set
 
+// Input validation constants
+const MAX_PRICE = 1000000; // $1M limit
+const MAX_USES = 10000;
+const ALLOWED_CATEGORIES = ['clothes', 'skincare', 'food', 'subscription', 'gift', 'jewellery', 'other'];
+const ALLOWED_MODES = ['softlife', 'bestie', 'mba'];
+
+// Validate input data
+function validateInput(data) {
+    const errors = [];
+    
+    // Validate price
+    const price = parseFloat(data.price);
+    if (isNaN(price) || price < 0 || price > MAX_PRICE) {
+        errors.push('Price must be between 0 and 1,000,000');
+    }
+    
+    // Validate category
+    if (data.category && !ALLOWED_CATEGORIES.includes(data.category)) {
+        errors.push('Invalid category');
+    }
+    
+    // Validate mode
+    if (data.mode && !ALLOWED_MODES.includes(data.mode)) {
+        errors.push('Invalid mode');
+    }
+    
+    // Validate uses
+    if (data.uses !== undefined) {
+        const uses = parseInt(data.uses);
+        if (isNaN(uses) || uses < 1 || uses > MAX_USES) {
+            errors.push('Uses must be between 1 and 10,000');
+        }
+    }
+    
+    // Validate originalPrice
+    if (data.originalPrice !== undefined) {
+        const originalPrice = parseFloat(data.originalPrice);
+        if (isNaN(originalPrice) || originalPrice < 0 || originalPrice > MAX_PRICE) {
+            errors.push('Original price must be between 0 and 1,000,000');
+        }
+    }
+    
+    return { isValid: errors.length === 0, errors };
+}
+
+// Sanitize string input to prevent XSS
+function sanitizeString(str, maxLength = 100) {
+    if (typeof str !== 'string') return '';
+    return str.substring(0, maxLength).replace(/[<>]/g, '');
+}
+
 export default async function handler(req, res) {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Get origin for CORS - only allow same origin or configured domains
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+        process.env.ALLOWED_ORIGINS?.split(',') || [],
+        req.headers.host ? `https://${req.headers.host}` : null
+    ].flat().filter(Boolean);
+    
+    // Set CORS headers - restrict to allowed origins or same origin
+    if (origin && allowedOrigins.some(allowed => origin === allowed || origin.endsWith(allowed))) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else if (!origin) {
+        // Same-origin request
+        const host = req.headers.host;
+        if (host) {
+            res.setHeader('Access-Control-Allow-Origin', `https://${host}`);
+        }
+    }
+    // If origin doesn't match, don't set CORS header (browser will block)
+    
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
 
     // Handle OPTIONS request for CORS preflight
     if (req.method === 'OPTIONS') {
@@ -17,17 +86,39 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Check content type
+    const contentType = req.headers['content-type'];
+    if (!contentType || !contentType.includes('application/json')) {
+        return res.status(400).json({ error: 'Content-Type must be application/json' });
+    }
+
+    // Validate request body exists and is within size limit (10KB)
+    if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ error: 'Invalid request body' });
+    }
+
+    const bodySize = JSON.stringify(req.body).length;
+    if (bodySize > 10240) { // 10KB limit
+        return res.status(413).json({ error: 'Request body too large' });
+    }
+
+    // Validate and sanitize input
+    const validation = validateInput(req.body);
+    if (!validation.isValid) {
+        return res.status(400).json({ error: 'Invalid input', details: validation.errors });
+    }
+
     const { price, category, mode, uses, originalPrice, costPerUse, savings } = req.body;
 
-    // Calculate full metrics including verdict
+    // Calculate full metrics including verdict (already validated)
     const data = {
-        price: parseFloat(price) || 0,
-        category: category || 'other',
-        mode: mode || 'softlife',
-        uses: parseInt(uses) || 1,
-        originalPrice: parseFloat(originalPrice) || 0,
-        costPerUse: parseFloat(costPerUse) || 0,
-        savings: parseFloat(savings) || 0
+        price: Math.min(MAX_PRICE, Math.max(0, parseFloat(price) || 0)),
+        category: ALLOWED_CATEGORIES.includes(category) ? category : 'other',
+        mode: ALLOWED_MODES.includes(mode) ? mode : 'softlife',
+        uses: Math.min(MAX_USES, Math.max(1, parseInt(uses) || 1)),
+        originalPrice: Math.min(MAX_PRICE, Math.max(0, parseFloat(originalPrice) || 0)),
+        costPerUse: Math.max(0, parseFloat(costPerUse) || 0),
+        savings: Math.max(0, parseFloat(savings) || 0)
     };
     
     // Calculate costPerDay for skincare
@@ -56,7 +147,8 @@ export default async function handler(req, res) {
                 });
             }
         } catch (error) {
-            console.error('AI generation error:', error);
+            // Log error but don't expose internal details
+            console.error('AI generation error:', error.message);
             // Fall through to template punchlines
         }
     }
@@ -279,8 +371,10 @@ Keep it funny, relatable, and under 100 characters each. Return ONLY the punchli
                 .slice(0, 3);
         }
     } catch (error) {
-        console.error('AI generation failed:', error);
-        throw error;
+        // Don't expose internal error details
+        console.error('AI generation failed:', error.message);
+        // Return empty array instead of throwing to fail gracefully
+        return [];
     }
     
     return [];
