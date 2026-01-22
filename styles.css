@@ -101,6 +101,11 @@ h1, h2, h3 {
     transform: scale(1.25);
 }
 
+/* Override scale for hero entrance animation states */
+.video-background .hero-bag-video:not(.hero-entrance-complete) {
+    transform: scale(0);
+}
+
 .video-background::after {
     content: '';
     position: absolute;
@@ -114,6 +119,104 @@ h1, h2, h3 {
     inset: 0;
     background: radial-gradient(ellipse at center, transparent 0%, hsl(var(--background) / 0.4) 70%);
     pointer-events: none;
+}
+
+/* Premium Hero Entrance Animation */
+.hero-bag-video {
+    will-change: transform, opacity, filter;
+    transform-origin: center center;
+}
+
+/* Initial state - hidden before animation */
+.hero-bag-video:not(.hero-entrance-complete) {
+    opacity: 0;
+    transform: scale(0);
+    filter: blur(8px);
+}
+
+/* Bag entrance animation */
+@keyframes heroBagEntrance {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+        filter: blur(8px);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.15);
+        filter: blur(2px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: blur(0);
+    }
+}
+
+.hero-bag-video.hero-entrance-active {
+    animation: heroBagEntrance 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.hero-bag-video.hero-entrance-complete {
+    opacity: 1;
+    transform: scale(1.25);
+    filter: blur(0);
+}
+
+/* Text elements - initial hidden state */
+.hero-title:not(.hero-entrance-complete),
+.hero-subtitle:not(.hero-entrance-complete),
+.hero-nav:not(.hero-entrance-complete) {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+/* Staggered text fade-in animation */
+@keyframes heroTextFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hero-title.hero-entrance-active {
+    animation: heroTextFadeIn 0.8s ease-out 1.8s forwards;
+}
+
+.hero-subtitle.hero-entrance-active {
+    animation: heroTextFadeIn 0.8s ease-out 2.1s forwards;
+}
+
+.hero-nav.hero-entrance-active {
+    animation: heroTextFadeIn 0.8s ease-out 2.4s forwards;
+}
+
+.hero-title.hero-entrance-complete,
+.hero-subtitle.hero-entrance-complete,
+.hero-nav.hero-entrance-complete {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .hero-bag-video,
+    .hero-title,
+    .hero-subtitle,
+    .hero-nav {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+    }
+    
+    .hero-bag-video {
+        transform: scale(1) scale(1.25) !important;
+    }
 }
 
 .background-decorations {
@@ -430,9 +533,13 @@ input[type="number"].key-input:focus {
 header {
     text-align: center;
     margin-bottom: 2rem;
-    animation: fadeInDown 0.6s ease;
     position: relative;
     z-index: 10;
+}
+
+/* Only apply fadeInDown if hero entrance is not active */
+header:not(:has(.hero-title.hero-entrance-active)) {
+    animation: fadeInDown 0.6s ease;
 }
 
 .title {
@@ -1797,11 +1904,17 @@ header nav a {
     justify-content: center;
     align-items: center;
     margin-top: 1rem;
+    width: 100%;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .tab-link {
-    display: inline-block;
-    padding: 0.625rem 1.5rem;
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding: 0.625rem 0.5rem;
     border: 1px solid hsl(var(--border));
     border-radius: 0.75rem;
     background: linear-gradient(145deg, hsl(var(--card) / 0.8), hsl(var(--muted) / 0.6));
@@ -1943,6 +2056,645 @@ header nav a {
 }
 
 /* ============================================
+   SHOP PAGE - PREMIUM CARD DESIGN
+   Clean, scannable offer cards
+   ============================================ */
+
+/* Accessibility: Visually Hidden */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Shop Page Body */
+.shop-page-body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background: hsl(var(--background));
+    background-attachment: fixed;
+    min-height: 100vh;
+    padding: 20px;
+    color: hsl(var(--foreground));
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Glass Card Component */
+.glass-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 24px;
+    box-shadow: 
+        0 10px 40px -10px rgba(0, 0, 0, 0.1),
+        0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* Shop Content Container */
+.shop-content {
+    max-width: 40rem;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+/* ============================================
+   PRODUCT HEADER CARD
+   ============================================ */
+
+.shop-product-header {
+    text-align: center;
+    padding: 32px;
+    margin-bottom: 28px;
+}
+
+/* Product Thumbnail - 160px with rounded-2xl */
+.shop-product-thumbnail {
+    width: 160px;
+    height: 160px;
+    border-radius: 20px;
+    object-fit: cover;
+    margin: 0 auto 20px;
+    display: block;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    background: #fff;
+}
+
+.shop-product-thumbnail-placeholder {
+    width: 160px;
+    height: 160px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #f8f6f4, #efe9e5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.shop-product-thumbnail-placeholder span {
+    font-size: 3rem;
+    opacity: 0.35;
+}
+
+/* Product Name - text-2xl font-semibold */
+.shop-product-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    margin: 0 0 12px 0;
+    line-height: 1.3;
+}
+
+/* Back to Scanner Link */
+.shop-back-link {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: 'Outfit', sans-serif;
+    color: hsl(var(--mocha));
+    text-decoration: none;
+    transition: all 0.25s ease;
+    opacity: 0.8;
+}
+
+.shop-back-link:hover {
+    opacity: 1;
+    color: hsl(var(--foreground));
+    text-decoration: underline;
+}
+
+/* ============================================
+   OFFER CARDS
+   ============================================ */
+
+/* Offer Cards Container - gap-4 (16px) */
+.shop-price-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+/* Base Offer Card */
+.offer-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    padding: 24px 28px;
+    opacity: 0;
+    animation: cardFadeIn 0.35s ease forwards;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes cardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.offer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
+.offer-card:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.3), 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Best Deal Card - teal gradient */
+.offer-card--best {
+    background: linear-gradient(135deg, rgba(240, 253, 250, 0.95), rgba(224, 251, 252, 0.95));
+    border: 2px solid #2dd4bf;
+}
+
+.offer-card--best:hover {
+    box-shadow: 0 12px 32px rgba(20, 184, 166, 0.15);
+}
+
+/* Best Deal Badge */
+.offer-badge {
+    position: absolute;
+    top: -12px;
+    right: 20px;
+    background: linear-gradient(135deg, #14b8a6, #0d9488);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 6px 14px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.35);
+}
+
+/* Card Content Layout */
+.offer-card-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Store Info (Left) */
+.offer-store-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.offer-store-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    margin: 0 0 8px 0;
+    line-height: 1.2;
+}
+
+/* Meta: Rating & Shipping stacked */
+.offer-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.offer-rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.offer-stars {
+    font-size: 16px;
+    color: #f59e0b;
+}
+
+.offer-rating-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+}
+
+.offer-rating-count {
+    font-size: 14px;
+    color: #888;
+}
+
+.offer-shipping {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    color: #666;
+}
+
+.offer-shipping-icon {
+    font-size: 14px;
+}
+
+.offer-shipping-text {
+    color: #666;
+}
+
+/* Price (Center-Right) - Larger */
+.offer-price {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    flex-shrink: 0;
+    padding: 0 16px;
+}
+
+.offer-price-currency {
+    font-size: 20px;
+    font-weight: 500;
+    color: hsl(var(--foreground));
+    opacity: 0.7;
+}
+
+.offer-price-amount {
+    font-size: 32px;
+    font-weight: 700;
+    color: hsl(var(--foreground));
+    letter-spacing: -1px;
+}
+
+.offer-card--best .offer-price-amount {
+    color: #0d9488;
+}
+
+/* Shop Button (Right) - px-8 py-3 rounded-xl */
+.offer-shop-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: linear-gradient(145deg, hsl(var(--mocha)), hsl(25 35% 30%));
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    text-decoration: none;
+    border-radius: 14px;
+    flex-shrink: 0;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(139, 109, 76, 0.2);
+}
+
+.offer-shop-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(139, 109, 76, 0.3);
+}
+
+.offer-shop-btn:active {
+    transform: translateY(0);
+}
+
+.offer-shop-arrow {
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+.offer-shop-btn:hover .offer-shop-arrow {
+    transform: translateX(3px);
+}
+
+/* Best Deal Button - Teal */
+.offer-card--best .offer-shop-btn {
+    background: linear-gradient(145deg, #14b8a6, #0d9488);
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
+
+.offer-card--best .offer-shop-btn:hover {
+    box-shadow: 0 8px 20px rgba(20, 184, 166, 0.4);
+}
+
+/* ============================================
+   SAVINGS CARD
+   ============================================ */
+
+.shop-savings-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+}
+
+.savings-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.savings-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.savings-amount {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0d9488;
+}
+
+.savings-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.savings-note {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.savings-store {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================
+   START OVER BUTTON
+   ============================================ */
+
+.shop-start-over-btn {
+    display: block;
+    width: 100%;
+    margin: 0 auto 24px;
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: 'Outfit', sans-serif;
+    color: hsl(var(--foreground));
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+}
+
+.shop-start-over-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.shop-start-over-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+}
+
+/* No Results Message */
+.shop-no-results {
+    text-align: center;
+    color: #666;
+    font-size: 16px;
+    padding: 56px 32px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    border: 2px dashed rgba(0, 0, 0, 0.1);
+    line-height: 1.5;
+}
+
+/* Show More Button */
+.shop-show-more-btn {
+    display: block;
+    width: 100%;
+    margin: 16px auto 0;
+    padding: 14px 24px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    color: hsl(var(--foreground));
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+}
+
+.shop-show-more-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    border-color: hsl(var(--gold) / 0.3);
+}
+
+.shop-show-more-btn:active {
+    transform: translateY(0);
+}
+
+.shop-show-more-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+}
+
+/* Remaining Offers Container */
+.shop-remaining-offers {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.shop-remaining-offers[style*="display: flex"] {
+    display: flex;
+}
+
+/* Shop Loading State */
+.shop-loading {
+    text-align: center;
+    color: #666;
+    font-size: 16px;
+    padding: 56px 32px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    line-height: 1.5;
+}
+
+.shop-loading-spinner {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top-color: #ff6b9d;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.shop-loading p {
+    margin: 0;
+    color: #666;
+    font-size: 16px;
+}
+
+/* Shop Footer */
+.shop-footer {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 24px;
+    padding: 0 16px;
+    line-height: 1.6;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+
+@media (max-width: 640px) {
+    .shop-page-body {
+        padding: 12px;
+    }
+    
+    .shop-content {
+        padding: 0 8px;
+    }
+    
+    .shop-product-header {
+        padding: 24px 20px;
+        margin-bottom: 20px;
+    }
+    
+    .shop-product-thumbnail,
+    .shop-product-thumbnail-placeholder {
+        width: 120px;
+        height: 120px;
+        border-radius: 18px;
+    }
+    
+    .shop-product-name {
+        font-size: 1.25rem;
+    }
+    
+    .shop-price-tags {
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    
+    .offer-card {
+        padding: 20px;
+    }
+    
+    .offer-card-content {
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    
+    .offer-store-info {
+        flex: 1 1 100%;
+        order: 1;
+    }
+    
+    .offer-store-name {
+        font-size: 1rem;
+    }
+    
+    .offer-meta {
+        flex-direction: row;
+        gap: 16px;
+    }
+    
+    .offer-rating,
+    .offer-shipping {
+        font-size: 14px;
+    }
+    
+    .offer-stars {
+        font-size: 14px;
+    }
+    
+    .offer-rating-value {
+        font-size: 14px;
+    }
+    
+    .offer-rating-count {
+        font-size: 13px;
+    }
+    
+    .offer-price {
+        order: 2;
+        padding: 0;
+    }
+    
+    .offer-price-currency {
+        font-size: 18px;
+    }
+    
+    .offer-price-amount {
+        font-size: 28px;
+    }
+    
+    .offer-shop-btn {
+        order: 3;
+        padding: 12px 20px;
+        font-size: 14px;
+        margin-left: auto;
+    }
+    
+    .offer-badge {
+        top: -10px;
+        right: 16px;
+        font-size: 10px;
+        padding: 5px 12px;
+    }
+    
+    .shop-savings-card {
+        padding: 20px;
+    }
+    
+    .savings-amount {
+        font-size: 28px;
+    }
+    
+    .shop-start-over-btn {
+        padding: 14px 20px;
+        font-size: 14px;
+    }
+    
+    .shop-back-link {
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+    
+    .shop-show-more-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+}
+
+/* ============================================
    GIRL MATH SCANNER STYLES
    Standalone scanner - NOT connected to Calculator
    ============================================ */
@@ -2004,8 +2756,96 @@ header nav a {
     color: rgba(255, 255, 255, 0.7);
     text-align: center;
     font-style: italic;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     line-height: 1.4;
+}
+
+/* Scanner Shop Actions - Full width CTA section */
+.scanner-shop-actions {
+    margin: 24px 0;
+    padding: 0;
+}
+
+/* Scanner Shop Button - Refined white/teal design */
+.scanner-shop-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 20px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 2px solid rgba(78, 205, 196, 0.4);
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    color: #00CEC9;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        0 2px 4px rgba(78, 205, 196, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    position: relative;
+    overflow: hidden;
+}
+
+.scanner-shop-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(78, 205, 196, 0.15), transparent);
+    transition: left 0.5s ease;
+}
+
+.scanner-shop-btn:hover::before {
+    left: 100%;
+}
+
+.scanner-shop-btn:hover {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(240, 253, 250, 0.95));
+    border-color: rgba(78, 205, 196, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 20px rgba(0, 0, 0, 0.1),
+        0 4px 8px rgba(78, 205, 196, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.scanner-shop-btn:active {
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 1px 2px rgba(78, 205, 196, 0.1),
+        inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.shop-btn-icon {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.shop-btn-text {
+    flex: 1;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.shop-btn-arrow {
+    font-size: 1rem;
+    opacity: 0.7;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.scanner-shop-btn:hover .shop-btn-arrow {
+    transform: translateX(3px);
+    opacity: 1;
 }
 
 /* Other Matches Expandable */
@@ -2344,6 +3184,7 @@ header nav a {
     text-align: center;
     font-style: italic;
     line-height: 1.4;
+    margin-bottom: 8px;
 }
 
 /* Mobile Responsive Adjustments for Scanner */
@@ -2385,5 +3226,20 @@ header nav a {
     
     .needs-info-actions {
         gap: 10px;
+    }
+    
+    .scanner-shop-actions {
+        margin: 20px 0;
+    }
+    
+    .scanner-shop-btn {
+        padding: 14px 16px;
+        font-size: 0.9rem;
+        border-radius: 12px;
+        gap: 8px;
+    }
+    
+    .shop-btn-icon {
+        font-size: 1rem;
     }
 }

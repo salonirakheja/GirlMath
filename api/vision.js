@@ -16,10 +16,11 @@ const CACHE_TTL = 86400;
 async function logScanResult(result) {
     try {
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
         if (!supabaseUrl || !supabaseKey) {
-            return; // Supabase not configured, skip logging
+            // Supabase not configured - SUPABASE_SERVICE_ROLE_KEY is required to bypass RLS
+            return;
         }
 
         const supabase = createClient(supabaseUrl, supabaseKey);

@@ -9,6 +9,8 @@ A playful calculator that turns purchases into "emotionally acceptable" logic (c
 - **Smart Verdicts**: Calculates cost-per-use, savings, emotional ROI
 - **Shareable Cards**: Copy link, copy caption (coming soon)
 - **AI-Enhanced Punchlines**: Optional AI-powered punchline generation via API
+- **Product Scanner**: Scan products with camera to get price estimates
+- **Real Product Search**: SerpAPI integration for accurate shopping results (optional)
 
 ## Setup
 
@@ -55,10 +57,17 @@ Add this to your repo's README (if public):
 
 ## Environment Variables (Optional)
 
-For AI-enhanced punchlines, add in Vercel dashboard (Settings → Environment Variables):
-- `AI_API_KEY` or `OPENAI_API_KEY`: Your OpenAI API key
+Add in Vercel dashboard (Settings → Environment Variables):
 
-**Note**: If not set, the app falls back to template-based punchlines (works perfectly fine without AI!).
+### For Product Scanner
+- `OPENAI_API_KEY` or `AI_API_KEY`: Your OpenAI API key for vision/image recognition
+
+### For Real Product Search (Shop Page)
+- `SERPAPI_API_KEY`: Your SerpAPI key for accurate shopping results
+  - Get your key at: https://serpapi.com/
+  - Without this, the shop page uses mock offers (still functional)
+
+**Note**: If API keys are not set, the app gracefully falls back to template-based features (works perfectly fine without APIs!).
 
 ## Testing Locally
 
@@ -73,10 +82,18 @@ For AI-enhanced punchlines, add in Vercel dashboard (Settings → Environment Va
 GirlMath/
 ├── index.html          # Homepage form
 ├── verdict.html        # Verdict card page
+├── calculator.html     # Calculator page
+├── camera.html         # Product scanner page
+├── shop.html           # Shop page with product offers
 ├── styles.css          # Pastel, bubbly styling
 ├── app.js              # Client-side rules engine & logic
+├── camera.js           # Camera and scanner logic
+├── scanner.js          # Scanner result processing
+├── shop.js             # Shop page with real/mock offers
 ├── api/
-│   └── punchline.js    # Vercel serverless function for AI punchlines
+│   ├── punchline.js    # Vercel serverless function for AI punchlines
+│   ├── vision.js       # Product image recognition via OpenAI
+│   └── search.js        # Product search via SerpAPI
 ├── vercel.json         # Vercel configuration
 └── package.json        # Project metadata
 ```

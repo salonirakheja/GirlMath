@@ -71,13 +71,14 @@ export default async function handler(req, res) {
         return res.status(413).json({ error: 'Request body too large' });
     }
 
-    // Check if Supabase is configured
+    // Check if Supabase is configured - require service role key for RLS bypass
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
         // Supabase not configured - silently succeed (don't block the app)
-        console.log('Supabase not configured, skipping log');
+        // Note: SUPABASE_SERVICE_ROLE_KEY is required (not anon key) to bypass RLS
+        console.log('Supabase not configured (missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY), skipping log');
         return res.status(200).json({ logged: false, reason: 'not_configured' });
     }
 

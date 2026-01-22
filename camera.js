@@ -6,6 +6,9 @@ let capturedImageData = null;
 let currentScanResult = null;
 let selectedCandidate = null;
 
+// Shop page context key
+const SHOP_CONTEXT_KEY = 'girlMathShopContext';
+
 // DOM elements
 const videoElement = document.getElementById('videoElement');
 const canvasElement = document.getElementById('canvasElement');
@@ -25,6 +28,10 @@ const primaryResult = document.getElementById('primaryResult');
 const disambiguationView = document.getElementById('disambiguationView');
 const needsInfoView = document.getElementById('needsInfoView');
 const selectedResultView = document.getElementById('selectedResult');
+
+// Shop buttons
+const shopBtnPrimary = document.getElementById('shopBtnPrimary');
+const shopBtnSelected = document.getElementById('shopBtnSelected');
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,7 +66,42 @@ document.addEventListener('DOMContentLoaded', () => {
     if (submitManualCategory) {
         submitManualCategory.addEventListener('click', handleManualCategorySubmit);
     }
+
+    // Set up shop buttons (if present)
+    if (shopBtnPrimary) {
+        shopBtnPrimary.addEventListener('click', () => {
+            openShopForSelectedCandidate();
+        });
+    }
+    if (shopBtnSelected) {
+        shopBtnSelected.addEventListener('click', () => {
+            openShopForSelectedCandidate();
+        });
+    }
 });
+
+function openShopForSelectedCandidate() {
+    if (!selectedCandidate) {
+        showError('Please select a match first.');
+        return;
+    }
+    if (!capturedImageData) {
+        showError('No scan image found. Please retake the photo and try again.');
+        return;
+    }
+
+    try {
+        const context = {
+            candidate: selectedCandidate,
+            imageDataUrl: capturedImageData
+        };
+        sessionStorage.setItem(SHOP_CONTEXT_KEY, JSON.stringify(context));
+        window.location.href = 'shop.html';
+    } catch (e) {
+        console.error('Error opening shop:', e);
+        showError('Could not open shop. Please try again.');
+    }
+}
 
 // Start camera
 async function startCamera() {
@@ -673,6 +715,7 @@ function retakePhoto() {
     // Reset selected candidate
     selectedCandidate = null;
     currentScanResult = null;
+    sessionStorage.removeItem(SHOP_CONTEXT_KEY);
     
     startCamera();
 }

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Girl Math ✨ - Shop</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="robots" content="noindex">
+</head>
+<body class="shop-page-body">
+    <!-- Video Background -->
+    <div class="video-background" aria-hidden="true">
+        <video autoplay muted loop playsinline>
+            <source src="/public/videos/hero-background.mp4" type="video/mp4">
+        </video>
+        <div class="bg-radial-vignette"></div>
+    </div>
+    <div class="background-decorations" aria-hidden="true">
+        <span class="decor decor-1">✨</span>
+        <span class="decor decor-2">💖</span>
+        <span class="decor decor-3">🍬</span>
+        <span class="decor decor-4">🎀</span>
+        <span class="decor decor-5">📎</span>
+        <span class="decor decor-6">⭐</span>
+        <span class="decor decor-7">🍭</span>
+        <span class="decor decor-8">🌸</span>
+        <span class="decor decor-9">✨</span>
+        <span class="decor decor-10">🎀</span>
+        <span class="decor decor-11">💖</span>
+        <span class="decor decor-12">🍬</span>
+        <span class="decor decor-13">📎</span>
+        <span class="decor decor-14">🦋</span>
+        <span class="decor decor-15">💫</span>
+        <span class="decor decor-16">🍦</span>
+        <span class="decor decor-17">🎈</span>
+        <span class="decor decor-18">🧁</span>
+        <span class="decor decor-19">🎀</span>
+        <span class="decor decor-20">🌈</span>
+        <span class="decor decor-21">🍓</span>
+        <span class="decor decor-22">💄</span>
+        <span class="decor decor-23">👛</span>
+        <span class="decor decor-24">💍</span>
+        <span class="decor decor-25">💅</span>
+        <span class="decor decor-26">💖</span>
+        <span class="decor decor-27">✨</span>
+        <span class="decor decor-28">🍭</span>
+        <span class="decor decor-29">🎀</span>
+        <span class="decor decor-30">🌸</span>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1 class="title"><span class="sparkle-v" aria-hidden="true">✨</span>Girl Math Scanner <span class="sparkle">✨</span></h1>
+            <p class="subtitle">Your scanner results, ready to shop</p>
+            <nav class="tabs-nav" style="margin-top: 15px;">
+                <a href="index.html" class="tab-link">Scanner</a>
+                <a href="shop.html" class="tab-link active">Shop</a>
+                <a href="calculator.html" class="tab-link">Calculator</a>
+            </nav>
+        </header>
+
+        <!-- Main Shop Content -->
+        <div class="shop-content" role="main">
+            <!-- Product Header - Glass Card -->
+            <div class="shop-product-header glass-card">
+                <img id="shopScannedImage" class="shop-product-thumbnail" alt="Scanned product" style="display:none;">
+                <div class="shop-product-thumbnail-placeholder" id="shopImagePlaceholder" aria-hidden="true">
+                    <span>📷</span>
+                </div>
+                <h2 class="shop-product-name" id="shopProductTitle">Loading…</h2>
+                <a href="index.html" class="shop-back-link" id="shopBackLink">← Back to Scanner</a>
+            </div>
+
+            <!-- Price Tags Container -->
+            <div class="shop-price-tags" id="shopOffers" role="list" aria-label="Shopping offers">
+                <!-- Price tag cards injected by JS -->
+            </div>
+
+            <!-- Savings Summary - Glass Card -->
+            <div class="shop-savings-card glass-card" id="shopSavingsCard" style="display:none;">
+                <div class="savings-left">
+                    <span class="savings-label">Potential Savings</span>
+                    <span class="savings-amount" id="savingsAmount">$0</span>
+                </div>
+                <div class="savings-right">
+                    <span class="savings-note">vs highest price</span>
+                    <span class="savings-store" id="savingsStore">by choosing store</span>
+                </div>
+            </div>
+
+            <!-- Start Over Button -->
+            <button type="button" class="shop-start-over-btn" id="shopStartOverBtn" aria-label="Start a new product search">
+                ← Back to Scanner
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="shop-footer">
+            Offers are suggestions based on photo recognition. Verify details before purchasing.
+        </footer>
+    </div>
+
+    <script src="shop.js"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

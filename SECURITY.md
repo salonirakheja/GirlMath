@@ -96,7 +96,7 @@ This document outlines the security measures implemented in the Girl Math applic
 
 ### Optional
 - `SUPABASE_URL`: Supabase project URL for logging
-- `SUPABASE_ANON_KEY` or `SUPABASE_SERVICE_ROLE_KEY`: Supabase API key for logging
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key for logging (**required** for logging - anon key no longer supported)
 - `KV_REST_API_URL`: Vercel KV URL for caching (vision API)
 - `KV_REST_API_TOKEN`: Vercel KV token for caching
 - `ALLOWED_ORIGINS`: Comma-separated list of allowed origins for CORS (e.g., `https://yourdomain.com,https://www.yourdomain.com`)
@@ -105,7 +105,37 @@ This document outlines the security measures implemented in the Girl Math applic
 - **Never commit API keys or secrets to version control**
 - **Use Vercel environment variables for production**
 - **Rotate API keys regularly**
-- **Use least-privilege keys (e.g., Supabase anon key instead of service role key when possible)**
+- **Service role key is used for logging** to bypass RLS policies (see RLS Policy Hardening below)
+
+## Supabase RLS Policy Hardening
+
+### Background
+The logging tables (`calculator_logs`, `scanner_logs`) previously had permissive RLS policies (`WITH CHECK (true)`) that allowed any client with the anon key to insert arbitrary data. This was flagged as a security warning in the Supabase dashboard.
+
+### Solution Implemented
+Instead of using the anon key with permissive INSERT policies, the API now:
+1. **Requires `SUPABASE_SERVICE_ROLE_KEY`** - The service role key bypasses RLS entirely, meaning inserts are only possible from the server-side API functions
+2. **No public INSERT access** - Without the service role key configured, logging is silently skipped (non-blocking)
+
+### RLS Policy Cleanup (Required)
+After deploying the code changes, remove the permissive INSERT policies from Supabase:
+
+**Run this SQL in Supabase SQL Editor:**
+```sql
+-- Remove permissive INSERT policies (service role bypasses RLS)
+DROP POLICY IF EXISTS "Allow inserts" ON public.calculator_logs;
+DROP POLICY IF EXISTS "Allow inserts" ON public.scanner_logs;
+
+-- Optional: If you want to keep RLS enabled but with no public policies:
+-- (Service role key bypasses RLS regardless)
+ALTER TABLE public.calculator_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scanner_logs ENABLE ROW LEVEL SECURITY;
+```
+
+### Why Service Role Key?
+- **Security**: Anon key is exposed in client requests; service role key stays server-side
+- **RLS Bypass**: Service role bypasses RLS, so no INSERT policies needed
+- **Controlled Access**: Only the serverless functions can write to logging tables
 
 ## Dependencies
 
