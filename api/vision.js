@@ -352,8 +352,8 @@ Return ONLY valid JSON in this EXACT format (no markdown, no extra text):
         // Cache the successful result
         await setCachedResult(cacheKey, normalizedResponse);
         
-        // Log to Supabase (non-blocking)
-        logScanResult(normalizedResponse).catch(() => {});
+        // Log to Supabase (awaited to ensure completion before function terminates)
+        await logScanResult(normalizedResponse).catch(() => {});
         
         return res.status(200).json(normalizedResponse);
 
