@@ -29,7 +29,7 @@ async function logScanResult(result) {
         const topCandidate = result.candidates?.[0];
         if (!topCandidate) return;
 
-        await supabase.from('scanner_logs').insert([{
+        const { data, error } = await supabase.from('scanner_logs').insert([{
             product_name: topCandidate.name || 'Unknown',
             brand: topCandidate.brand || null,
             category: topCandidate.category || 'other',
@@ -37,8 +37,19 @@ async function logScanResult(result) {
             price_high: topCandidate.priceRange?.high || 0,
             confidence: topCandidate.confidence || 0
         }]);
+
+        if (error) {
+            console.error('Scanner log INSERT failed:', {
+                code: error.code,
+                message: error.message,
+                details: error.details,
+                hint: error.hint
+            });
+        } else {
+            console.log('Scanner log INSERT successful');
+        }
     } catch (error) {
-        console.warn('Scanner log error (non-critical):', error.message);
+        console.error('Scanner log error (non-critical):', error.message, error.stack);
     }
 }
 

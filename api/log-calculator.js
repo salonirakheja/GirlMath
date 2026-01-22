@@ -106,11 +106,18 @@ export default async function handler(req, res) {
             ]);
 
         if (error) {
-            // Don't expose internal error details
-            console.error('Supabase insert error:', error.message);
+            // Don't expose internal error details to client, but log full details server-side
+            console.error('Calculator log INSERT failed:', {
+                code: error.code,
+                message: error.message,
+                details: error.details,
+                hint: error.hint
+            });
             // Don't fail the request - logging is non-critical
             return res.status(200).json({ logged: false, reason: 'insert_error' });
         }
+        
+        console.log('Calculator log INSERT successful');
 
         return res.status(200).json({ logged: true });
 
