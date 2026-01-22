@@ -184,40 +184,56 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Enhanced prompt that emphasizes brand detection and luxury identification
-        const prompt = `You are a luxury product identification expert. Analyze this image and identify what product it shows.
+        // Universal product identification prompt - handles luxury, everyday items, barcodes, ISBNs
+        const prompt = `You are a UNIVERSAL product identification expert. Your job is to identify ANY product from an image - luxury goods, everyday items, tools, books, electronics, beauty devices, and more.
 
-YOUR TASK:
-1. **LOOK FOR BRAND MARKINGS FIRST** - Check for logos, engravings, stamps, hardware style, and design signatures
-2. Identify the product - even from partial, blurry, or imperfect photos
-3. If you recognize a LUXURY BRAND, use its name prominently and adjust price range accordingly
-4. ALWAYS provide a realistic price range in USD - NEVER output $0
+**STEP 1: READ ALL VISIBLE TEXT FIRST**
+Before anything else, carefully examine the image for:
+- Product names, model numbers, brand names printed on the item
+- Barcodes (UPC, EAN) - note the numbers if visible
+- ISBN numbers on books - use this to identify the exact book title and author
+- Serial numbers, SKU codes, packaging text
+- Labels, stickers, engravings, embossed text
+- App screens or digital displays showing product info
 
-**BRAND DETECTION IS CRITICAL:**
-- Look for engravings, stamps, logos, distinctive hardware, or signature designs
-- Common LUXURY brands to recognize:
-  * Jewelry: Cartier, Tiffany & Co, Van Cleef & Arpels, Bvlgari, Harry Winston, Chopard
-  * Watches: Rolex, Patek Philippe, Audemars Piguet, Omega, Cartier, TAG Heuer
-  * Bags: Hermès, Louis Vuitton, Chanel, Gucci, Prada, Dior, Celine, Bottega Veneta
-  * Clothes: Chanel, Dior, Gucci, Prada, Burberry, Valentino
-  * Shoes: Louboutin, Jimmy Choo, Manolo Blahnik, Gucci, Prada
-- If you see Cartier-style screws (Love bracelet), Van Cleef clover motifs, Tiffany blue, etc. - IDENTIFY THE BRAND
-- Luxury brand items are typically $500-$50,000+ depending on the item
+**STEP 2: IDENTIFY THE PRODUCT**
+Use the text you found PLUS visual features to identify:
+- What is the product? (Be specific: "Nail Clipper" not "Tool", "Red Light Therapy Cap" not "Device")
+- What brand is it? (Read the label! Look for logos)
+- What model/variant if identifiable?
+
+**STEP 3: DETERMINE IF LUXURY OR EVERYDAY**
+Check for luxury brand indicators:
+- Jewelry: Cartier, Tiffany & Co, Van Cleef & Arpels, Bvlgari
+- Watches: Rolex, Patek Philippe, Omega, Cartier
+- Bags: Hermès, Louis Vuitton, Chanel, Gucci, Prada
+- Shoes: Louboutin, Jimmy Choo, Gucci
+If luxury → use luxury pricing. If everyday → use realistic everyday pricing.
+
+**PRODUCT CATEGORIES TO RECOGNIZE:**
+- TOOLS: Nail clippers, scissors, screwdrivers, pliers, multitools, grooming tools
+- BOOKS: Identify by ISBN, title, author, cover design
+- BEAUTY DEVICES: Red light therapy, LED masks, facial massagers, hair removal devices
+- PERSONAL CARE: Hair dryers, straighteners, electric shavers, toothbrushes
+- ELECTRONICS: Phones, tablets, laptops, headphones, chargers, cables
+- HOME: Kitchen gadgets, cleaning tools, organizers, appliances
+- HEALTH: Blood pressure monitors, thermometers, TENS units, massage guns
+- Plus: jewelry, watches, bags, shoes, clothes, skincare, cosmetics
 
 **CRITICAL RULES:**
-- NEVER return prices of 0 or empty prices
-- If you recognize a luxury brand, price range should reflect THAT BRAND's pricing
-- Cartier Love Bracelet → $4,000-$12,000 (not $50-$500)
-- Hermès Birkin → $8,000-$50,000 (not $200-$2000)
-- If uncertain between luxury and non-luxury, provide BOTH as candidates with appropriate price ranges
+- NEVER say "unable to identify" - always make your best educated guess
+- NEVER return prices of 0 - every product has value
+- If you see text/ISBN/barcode, USE IT to identify the product
+- Be SPECIFIC: "Revlon One-Step Hair Dryer" not "Hair Tool"
+- Include brand in name when visible: "OXO Good Grips Nail Clipper"
 
 Return ONLY valid JSON in this EXACT format (no markdown, no extra text):
 {
-    "imageSummary": "Brief description including any brand indicators you see",
+    "imageSummary": "Brief description including any text/labels/ISBN you can read",
     "candidates": [
         {
-            "name": "Product name (include brand if recognized, e.g., 'Cartier Love Bracelet')",
-            "brand": "Brand name or null if unknown",
+            "name": "Specific product name with brand (e.g., 'Tweezerman Nail Clipper', 'Atomic Habits by James Clear')",
+            "brand": "Brand name or null if truly unknown",
             "category": "phone|jewellery|shoes|bag|clothes|skincare|electronics|watch|cosmetics|accessory|home|other",
             "confidence": 0.0 to 1.0,
             "priceRange": {
@@ -225,10 +241,10 @@ Return ONLY valid JSON in this EXACT format (no markdown, no extra text):
                 "high": maximum_realistic_price_as_number,
                 "currency": "USD"
             },
-            "assumptions": "What affects the price (e.g., 'gold vs rose gold, size, with/without diamonds')"
+            "assumptions": "What affects the price (e.g., 'stainless steel vs titanium, professional vs home use')"
         },
         {
-            "name": "Second possibility (could be non-luxury alternative if uncertain)",
+            "name": "Second possibility or alternative identification",
             "brand": "Brand or null",
             "category": "category",
             "confidence": slightly_lower_confidence,
@@ -238,27 +254,35 @@ Return ONLY valid JSON in this EXACT format (no markdown, no extra text):
     ]
 }
 
-CONFIDENCE GUIDE:
-- 0.85-1.0: Luxury brand clearly identifiable (logo visible, signature design confirmed)
-- 0.7-0.84: Likely luxury brand based on style/design cues
-- 0.5-0.69: Could be luxury OR non-luxury, uncertain
-- 0.3-0.49: Probably non-luxury but has some premium features
+**CONFIDENCE GUIDE:**
+- 0.85-1.0: Text/ISBN clearly readable, product unmistakably identified
+- 0.7-0.84: Strong visual match, brand likely but not 100% confirmed
+- 0.5-0.69: Good guess based on shape/features, some uncertainty
+- 0.3-0.49: Reasonable guess, limited visual information
 
-LUXURY PRICE EXAMPLES:
+**EVERYDAY PRODUCT PRICE EXAMPLES:**
+- Nail clipper (basic) → $3-$15
+- Nail clipper (premium: Tweezerman, Victorinox) → $15-$40
+- Red light therapy cap/device → $100-$600
+- LED face mask → $50-$500
+- Book (paperback) → $10-$20
+- Book (hardcover) → $20-$40
+- Hair dryer (Dyson) → $300-$500
+- Hair dryer (Revlon, Conair) → $25-$80
+- Electric toothbrush (Oral-B, Sonicare) → $50-$300
+- Massage gun (Theragun) → $200-$600
+
+**LUXURY PRODUCT PRICE EXAMPLES:**
 - Cartier Love Bracelet → $4,000-$12,000
-- Cartier Juste Un Clou → $3,500-$10,000
-- Tiffany T Bracelet → $1,000-$5,000
 - Rolex Submariner → $8,000-$15,000
 - Hermès Birkin → $10,000-$50,000
 - Louis Vuitton Neverfull → $1,500-$2,500
 - Chanel Classic Flap → $8,000-$12,000
 
-NON-LUXURY ALTERNATIVES:
-- Generic gold bangle → $50-$500
-- Fashion jewelry → $20-$200
-- Designer-inspired bag → $100-$500
-
-Remember: Brand detection is your TOP PRIORITY. A Cartier bracelet should NEVER be priced at $50-$500.`;
+**REMEMBER:**
+- READ THE LABEL/TEXT/ISBN FIRST - this is your most reliable identification method
+- Be specific and confident - make your best educated guess
+- Every product has a realistic price range - never return $0`;
 
         // Call OpenAI Vision API
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -376,8 +400,40 @@ function extractFromText(content) {
     let bestGuessName = 'Lifestyle Product';
     let priceRange = { low: 25, high: 200, currency: 'USD' };
     
+    // Book detection (check first since ISBN is a strong identifier)
+    if (lowerContent.includes('book') || lowerContent.includes('isbn') || 
+        lowerContent.includes('hardcover') || lowerContent.includes('paperback') ||
+        lowerContent.includes('novel') || lowerContent.includes('author')) {
+        category = 'other';
+        bestGuessName = lowerContent.includes('hardcover') ? 'Hardcover Book' : 
+                        lowerContent.includes('paperback') ? 'Paperback Book' : 'Book';
+        priceRange = { low: 10, high: 35, currency: 'USD' };
+    }
+    // Tools/grooming tools detection
+    else if (lowerContent.includes('nail clipper') || lowerContent.includes('nail cutter') ||
+             lowerContent.includes('clipper') || lowerContent.includes('scissors') ||
+             lowerContent.includes('tweezer') || lowerContent.includes('grooming') ||
+             lowerContent.includes('tool') || lowerContent.includes('plier') ||
+             lowerContent.includes('screwdriver')) {
+        category = 'home';
+        bestGuessName = lowerContent.includes('nail') ? 'Nail Clipper' : 
+                        lowerContent.includes('tweezer') ? 'Tweezers' :
+                        lowerContent.includes('scissor') ? 'Scissors' : 'Grooming Tool';
+        priceRange = { low: 5, high: 40, currency: 'USD' };
+    }
+    // Beauty/therapy devices detection
+    else if (lowerContent.includes('red light') || lowerContent.includes('led mask') ||
+             lowerContent.includes('therapy') || lowerContent.includes('light therapy') ||
+             lowerContent.includes('facial device') || lowerContent.includes('beauty device') ||
+             lowerContent.includes('massager') || lowerContent.includes('massage gun')) {
+        category = 'electronics';
+        bestGuessName = lowerContent.includes('red light') ? 'Red Light Therapy Device' : 
+                        lowerContent.includes('led mask') ? 'LED Face Mask' :
+                        lowerContent.includes('massage gun') ? 'Massage Gun' : 'Beauty Device';
+        priceRange = { low: 80, high: 400, currency: 'USD' };
+    }
     // Phone detection
-    if (lowerContent.includes('phone') || lowerContent.includes('iphone') || 
+    else if (lowerContent.includes('phone') || lowerContent.includes('iphone') || 
         lowerContent.includes('samsung') || lowerContent.includes('smartphone') ||
         lowerContent.includes('android')) {
         category = 'phone';
@@ -605,11 +661,12 @@ function getBetterProductName(category, index) {
         bag: ['Handbag', 'Fashion Bag', 'Tote Bag'],
         clothes: ['Clothing Item', 'Fashion Apparel', 'Garment'],
         skincare: ['Beauty Product', 'Skincare Item', 'Personal Care Product'],
-        electronics: ['Electronic Device', 'Tech Gadget', 'Digital Device'],
+        electronics: ['Electronic Device', 'Tech Gadget', 'Beauty Device'],
         watch: ['Wristwatch', 'Timepiece', 'Watch'],
         cosmetics: ['Cosmetic Product', 'Beauty Item', 'Makeup Product'],
         accessory: ['Fashion Accessory', 'Personal Accessory', 'Style Accessory'],
-        other: ['Lifestyle Product', 'Personal Item', 'Everyday Item']
+        home: ['Home Tool', 'Household Item', 'Grooming Tool'],
+        other: ['Personal Item', 'Book', 'Everyday Item']
     };
     
     const names = categoryNames[category] || categoryNames.other;
@@ -633,7 +690,8 @@ function getDefaultPriceRange(category) {
         watch: { low: 80, high: 600, currency: 'USD' },
         cosmetics: { low: 15, high: 100, currency: 'USD' },
         accessory: { low: 20, high: 200, currency: 'USD' },
-        other: { low: 25, high: 200, currency: 'USD' }
+        home: { low: 10, high: 150, currency: 'USD' },
+        other: { low: 15, high: 200, currency: 'USD' }
     };
     return ranges[category] || ranges.other;
 }
@@ -645,13 +703,16 @@ function getDefaultPriceRange(category) {
  */
 function normalizeCategory(category) {
     const validCategories = ['phone', 'jewellery', 'jewelry', 'shoes', 'bag', 'clothes', 
-                            'skincare', 'electronics', 'watch', 'cosmetics', 'accessory', 'other'];
+                            'skincare', 'electronics', 'watch', 'cosmetics', 'accessory', 'home', 'other'];
     const lowerCategory = (category || 'other').toLowerCase().trim();
     
     if (lowerCategory === 'jewelry') return 'jewellery';
     if (lowerCategory === 'clothing') return 'clothes';
     if (lowerCategory === 'handbag' || lowerCategory === 'purse') return 'bag';
     if (lowerCategory === 'smartphone' || lowerCategory === 'mobile') return 'phone';
+    if (lowerCategory === 'tool' || lowerCategory === 'tools' || lowerCategory === 'grooming') return 'home';
+    if (lowerCategory === 'book' || lowerCategory === 'books') return 'other';
+    if (lowerCategory === 'health' || lowerCategory === 'medical' || lowerCategory === 'beauty device') return 'electronics';
     
     if (validCategories.includes(lowerCategory)) {
         return lowerCategory;
