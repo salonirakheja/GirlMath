@@ -6,8 +6,41 @@ let capturedImageData = null;
 let currentScanResult = null;
 let selectedCandidate = null;
 
+// Track if we're in the middle of an operation to prevent race conditions
+let isProcessing = false;
+
 // Shop page context key
 const SHOP_CONTEXT_KEY = 'girlMathShopContext';
+
+// Safe sessionStorage wrapper for private browsing mode
+const safeStorage = {
+    getItem(key) {
+        try {
+            return sessionStorage.getItem(key);
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return null;
+        }
+    },
+    setItem(key, value) {
+        try {
+            sessionStorage.setItem(key, value);
+            return true;
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return false;
+        }
+    },
+    removeItem(key) {
+        try {
+            sessionStorage.removeItem(key);
+            return true;
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return false;
+        }
+    }
+};
 
 // DOM elements
 const videoElement = document.getElementById('videoElement');
@@ -95,7 +128,10 @@ function openShopForSelectedCandidate() {
             candidate: selectedCandidate,
             imageDataUrl: capturedImageData
         };
-        sessionStorage.setItem(SHOP_CONTEXT_KEY, JSON.stringify(context));
+        if (!safeStorage.setItem(SHOP_CONTEXT_KEY, JSON.stringify(context))) {
+            showError('Could not save product data. Please try in a regular browser window.');
+            return;
+        }
         window.location.href = 'shop.html';
     } catch (e) {
         console.error('Error opening shop:', e);
@@ -182,6 +218,16 @@ async function capturePhoto() {
 
 // Call vision API to identify product
 async function identifyProduct(imageDataUrl) {
+    // Prevent concurrent requests
+    if (isProcessing) {
+        console.log('Already processing, ignoring duplicate request');
+        return;
+    }
+
+    isProcessing = true;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for vision API
+
     try {
         const response = await fetch('/api/vision', {
             method: 'POST',
@@ -190,8 +236,11 @@ async function identifyProduct(imageDataUrl) {
             },
             body: JSON.stringify({
                 imageDataUrl: imageDataUrl
-            })
+            }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         const responseText = await response.text();
 
@@ -213,15 +262,24 @@ async function identifyProduct(imageDataUrl) {
             // Fallback if module not loaded
             currentScanResult = processLocalScanResult(data);
         }
-        
+
         // Display results
         displayScanResult(currentScanResult);
         showLoading(false);
 
     } catch (error) {
-        console.error('Error identifying product:', error);
-        showError(error.message || 'Failed to identify product. Please try again.');
+        clearTimeout(timeoutId);
+
+        if (error.name === 'AbortError') {
+            console.error('Vision API request timed out');
+            showError('Request timed out. Please try again with a clearer image.');
+        } else {
+            console.error('Error identifying product:', error);
+            showError(error.message || 'Failed to identify product. Please try again.');
+        }
         showLoading(false);
+    } finally {
+        isProcessing = false;
     }
 }
 
@@ -707,16 +765,16 @@ function retakePhoto() {
     capturedImageData = null;
     capturedImage.src = '';
     capturedImage.style.display = 'none';
-    
+
     hideAllResultViews();
     hideError();
     showLoading(false);
-    
+
     // Reset selected candidate
     selectedCandidate = null;
     currentScanResult = null;
-    sessionStorage.removeItem(SHOP_CONTEXT_KEY);
-    
+    safeStorage.removeItem(SHOP_CONTEXT_KEY);
+
     startCamera();
 }
 
@@ -734,9 +792,48 @@ window.addEventListener('beforeunload', () => {
     stopCamera();
 });
 
-// Handle page visibility change
+// Handle page visibility change - properly pause/resume camera
+let streamPausedByVisibility = false;
+let visibilityTimeout = null;
+
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && stream) {
-        // Keep stream running for brief tab switches
+        // Clear any pending timeout
+        if (visibilityTimeout) {
+            clearTimeout(visibilityTimeout);
+        }
+
+        // If hidden for more than 30 seconds, stop the camera to save resources
+        visibilityTimeout = setTimeout(() => {
+            if (document.hidden && stream) {
+                streamPausedByVisibility = true;
+                stopCamera();
+                console.log('Camera stopped due to extended tab inactivity');
+            }
+        }, 30000); // 30 seconds
+    } else if (!document.hidden) {
+        // Clear the timeout if user comes back
+        if (visibilityTimeout) {
+            clearTimeout(visibilityTimeout);
+            visibilityTimeout = null;
+        }
+
+        // If stream was paused by visibility, restart it
+        if (streamPausedByVisibility && !stream) {
+            streamPausedByVisibility = false;
+            // Only restart if we're on a page that should have camera
+            if (videoElement && capturedImage && capturedImage.style.display === 'none') {
+                startCamera();
+            }
+        }
     }
+});
+
+// Also stop camera when page is frozen (mobile browsers)
+document.addEventListener('freeze', () => {
+    stopCamera();
+});
+
+document.addEventListener('resume', () => {
+    // Don't auto-restart on resume - let user trigger it
 });

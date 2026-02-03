@@ -1,4 +1,76 @@
 // Girl Math Rules Engine - Short punchlines (<=120 chars, screenshot-friendly)
+
+// ============================================================================
+// API RATE LIMITING & REQUEST MANAGEMENT
+// ============================================================================
+
+// Simple rate limiter to prevent overwhelming the API
+const apiRateLimiter = {
+    queue: [],
+    inFlight: 0,
+    maxConcurrent: 2,
+    minInterval: 500, // ms between requests
+    lastRequestTime: 0,
+
+    async throttle(fn) {
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+
+        // Wait if we're making requests too fast
+        if (timeSinceLastRequest < this.minInterval) {
+            await new Promise(resolve => setTimeout(resolve, this.minInterval - timeSinceLastRequest));
+        }
+
+        // Wait if too many requests in flight
+        while (this.inFlight >= this.maxConcurrent) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        this.inFlight++;
+        this.lastRequestTime = Date.now();
+
+        try {
+            return await fn();
+        } finally {
+            this.inFlight--;
+        }
+    }
+};
+
+// Safe sessionStorage wrapper with try/catch for private browsing mode
+const safeStorage = {
+    getItem(key) {
+        try {
+            return sessionStorage.getItem(key);
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return null;
+        }
+    },
+    setItem(key, value) {
+        try {
+            sessionStorage.setItem(key, value);
+            return true;
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return false;
+        }
+    },
+    removeItem(key) {
+        try {
+            sessionStorage.removeItem(key);
+            return true;
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return false;
+        }
+    }
+};
+
+// ============================================================================
+// GIRL MATH RULES
+// ============================================================================
+
 const girlMathRules = {
     softlife: {
         clothes: [
@@ -536,22 +608,30 @@ function generatePunchline(metrics) {
 async function generateAlternatePunchline(metrics) {
     // Try to fetch from API first, fallback to template
     try {
-        const response = await fetch('/api/punchline', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                price: metrics.price,
-                category: metrics.category,
-                mode: 'softlife', // Default to softlife
-                uses: metrics.uses,
-                originalPrice: metrics.originalPrice,
-                costPerUse: metrics.costPerUse,
-                savings: metrics.savings
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        const response = await apiRateLimiter.throttle(() =>
+            fetch('/api/punchline', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    price: metrics.price,
+                    category: metrics.category,
+                    mode: 'softlife', // Default to softlife
+                    uses: metrics.uses,
+                    originalPrice: metrics.originalPrice,
+                    costPerUse: metrics.costPerUse,
+                    savings: metrics.savings
+                }),
+                signal: controller.signal
             })
-        });
-        
+        );
+
+        clearTimeout(timeoutId);
+
         if (response.ok) {
             const data = await response.json();
             if (data.punchlines && data.punchlines.length > 0) {
@@ -559,14 +639,18 @@ async function generateAlternatePunchline(metrics) {
             }
         }
     } catch (error) {
-        console.log('API not available, using template:', error);
+        if (error.name === 'AbortError') {
+            console.log('API request timed out, using template');
+        } else {
+            console.log('API not available, using template:', error.message);
+        }
     }
-    
+
     // Fallback to template
     const rules = girlMathRules.softlife[metrics.category] || girlMathRules.softlife.other;
     const applicableRules = rules.map(rule => rule(metrics)).filter(p => p !== null);
     const allPunchlines = applicableRules.length > 0 ? applicableRules : rules.map(r => r(metrics));
-    
+
     // Return a different random one (shuffle to ensure different)
     const shuffled = allPunchlines.sort(() => Math.random() - 0.5);
     return shuffled[0];
@@ -633,10 +717,15 @@ function generateCommunityInsight(metrics) {
 function generateWhatIfScenarios(data, currentMetrics) {
     const scenarios = [];
     const price = parseFloat(data.price) || 0;
-    
+
+    // Validate price - don't generate scenarios for invalid prices
+    if (!Number.isFinite(price) || price <= 0 || price > 1000000) {
+        return scenarios;
+    }
+
     // Scenario 1: Increase uses (if uses are reasonable to increase)
     if (data.uses && parseInt(data.uses) > 0) {
-        const currentUses = parseInt(data.uses);
+        const currentUses = Math.max(1, Math.min(10000, parseInt(data.uses) || 1));
         let newUses;
         if (currentUses < 10) {
             newUses = currentUses * 3; // Triple small numbers
@@ -645,16 +734,22 @@ function generateWhatIfScenarios(data, currentMetrics) {
         } else {
             newUses = Math.round(currentUses * 2); // Double for large numbers
         }
-        
+
+        // Cap at reasonable maximum
+        newUses = Math.min(newUses, 10000);
+
         const scenarioData = { ...data, uses: newUses.toString() };
         const scenarioMetrics = calculateMetrics(scenarioData);
-        
-        scenarios.push({
-            description: `What if you use it ${newUses} times?`,
-            newScore: scenarioMetrics.score,
-            newVerdict: scenarioMetrics.verdictInfo.stamp,
-            updates: { uses: newUses.toString() }
-        });
+
+        // Validate scenario metrics before adding
+        if (Number.isFinite(scenarioMetrics.score)) {
+            scenarios.push({
+                description: `What if you use it ${newUses} times?`,
+                newScore: scenarioMetrics.score,
+                newVerdict: scenarioMetrics.verdictInfo.stamp,
+                updates: { uses: newUses.toString() }
+            });
+        }
     } else if (data.category) {
         // If no uses provided, suggest adding uses
         const suggestedUses = categoryDefaultUses[data.category] || 30;
@@ -672,33 +767,42 @@ function generateWhatIfScenarios(data, currentMetrics) {
     // Scenario 2: Add original price (on sale) - if not already set
     if (price > 30 && (!data.originalPrice || parseFloat(data.originalPrice) <= price)) {
         const originalPrice = Math.round(price * 1.5); // 33% off sale
-        
-        const scenarioData = { ...data, originalPrice: originalPrice.toString() };
+
+        // Cap at reasonable maximum
+        const cappedOriginalPrice = Math.min(originalPrice, 1000000);
+
+        const scenarioData = { ...data, originalPrice: cappedOriginalPrice.toString() };
         const scenarioMetrics = calculateMetrics(scenarioData);
-        
-        scenarios.push({
-            description: `What if it was on sale from $${originalPrice}?`,
-            newScore: scenarioMetrics.score,
-            newVerdict: scenarioMetrics.verdictInfo.stamp,
-            updates: { originalPrice: originalPrice.toString() }
-        });
+
+        // Validate scenario metrics before adding
+        if (Number.isFinite(scenarioMetrics.score)) {
+            scenarios.push({
+                description: `What if it was on sale from $${cappedOriginalPrice}?`,
+                newScore: scenarioMetrics.score,
+                newVerdict: scenarioMetrics.verdictInfo.stamp,
+                updates: { originalPrice: cappedOriginalPrice.toString() }
+            });
+        }
     }
-    
+
     // If we don't have 2-3 scenarios, add a price reduction scenario
     if (scenarios.length < 2 && price > 50) {
         const reducedPrice = Math.round(price * 0.7); // 30% cheaper
-        
+
         const scenarioData = { ...data, price: reducedPrice.toString() };
         const scenarioMetrics = calculateMetrics(scenarioData);
-        
-        scenarios.push({
-            description: `What if it cost $${reducedPrice} instead?`,
-            newScore: scenarioMetrics.score,
-            newVerdict: scenarioMetrics.verdictInfo.stamp,
-            updates: { price: reducedPrice.toString() }
-        });
+
+        // Validate scenario metrics before adding
+        if (Number.isFinite(scenarioMetrics.score)) {
+            scenarios.push({
+                description: `What if it cost $${reducedPrice} instead?`,
+                newScore: scenarioMetrics.score,
+                newVerdict: scenarioMetrics.verdictInfo.stamp,
+                updates: { price: reducedPrice.toString() }
+            });
+        }
     }
-    
+
     // Return top 3 scenarios
     return scenarios.slice(0, 3);
 }
@@ -712,7 +816,7 @@ function applyWhatIfScenario(updates) {
         const updatedData = { ...currentData, ...updates };
         
         // Store in sessionStorage as backup
-        sessionStorage.setItem('girlMathData', JSON.stringify(updatedData));
+        safeStorage.setItem('girlMathData', JSON.stringify(updatedData));
         
         // Build URL with params for better UX
         const params = new URLSearchParams();
@@ -759,16 +863,32 @@ function logCalculatorUsage(price, category) {
     logTimeout = setTimeout(() => {
         // Only log if we have a valid price
         if (!price || price <= 0) return;
-        
-        fetch('/api/log-calculator', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                price_low: price,
-                price_high: price,
-                category: category || 'other'
-            })
-        }).catch(() => {}); // Silently fail - logging is non-critical
+
+        // Use rate limiter for API calls
+        apiRateLimiter.throttle(async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+            try {
+                await fetch('/api/log-calculator', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        price_low: price,
+                        price_high: price,
+                        category: category || 'other'
+                    }),
+                    signal: controller.signal
+                });
+            } catch (error) {
+                // Silently fail - logging is non-critical
+                if (error.name !== 'AbortError') {
+                    console.debug('Log API failed (non-critical):', error.message);
+                }
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }).catch(() => {}); // Silently fail
     }, 2000); // Wait 2 seconds after last input before logging
 }
 
@@ -844,8 +964,13 @@ function generateResults(data) {
     // Show screen with fade-in animation
     requestAnimationFrame(() => {
         screen.classList.add('visible');
+        // Add aria-live for screen readers to announce updates
+        if (!screen.hasAttribute('aria-live')) {
+            screen.setAttribute('aria-live', 'polite');
+            screen.setAttribute('aria-atomic', 'true');
+        }
     });
-    
+
     // Store metrics for sharing
     window.currentMetrics = metrics;
     window.currentData = data;
@@ -1131,35 +1256,47 @@ function updateVerdictLive() {
 // Handle real-time updates (no form submission needed)
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('girlMathForm');
-    
+
     if (form) {
+        // Debounce function for real-time updates (defined before use)
+        let updateTimeout;
+        function debounceUpdateVerdict() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                try {
+                    updateVerdictLive();
+                } catch (error) {
+                    console.error('Error updating verdict:', error);
+                }
+            }, 300); // Wait 300ms after user stops typing for smoother UX
+        }
+
         // Add real-time update listeners to all form inputs
         const inputs = form.querySelectorAll('input, select');
         inputs.forEach(input => {
             // Use 'input' event for text/number fields (fires on every keystroke)
             // Use 'change' event for selects (fires on selection)
             const eventType = input.tagName === 'SELECT' ? 'change' : 'input';
-            
+
             input.addEventListener(eventType, () => {
-                debounceUpdateVerdict();
+                try {
+                    debounceUpdateVerdict();
+                } catch (error) {
+                    console.error('Error in input handler:', error);
+                }
             });
-            
+
             // Also listen to 'change' for number inputs to catch when user finishes
             if (input.type === 'number') {
                 input.addEventListener('change', () => {
-                    debounceUpdateVerdict();
+                    try {
+                        debounceUpdateVerdict();
+                    } catch (error) {
+                        console.error('Error in change handler:', error);
+                    }
                 });
             }
         });
-        
-        // Debounce function for real-time updates
-        let updateTimeout;
-        function debounceUpdateVerdict() {
-            clearTimeout(updateTimeout);
-            updateTimeout = setTimeout(() => {
-                updateVerdictLive();
-            }, 300); // Wait 300ms after user stops typing for smoother UX
-        }
         
         // Remove form submission (no longer needed)
         form.addEventListener('submit', (e) => {
@@ -1316,7 +1453,7 @@ function getCurrentData() {
             data = Object.fromEntries(formData);
         } else {
             // Fallback to sessionStorage
-            data = JSON.parse(sessionStorage.getItem('girlMathData') || '{}');
+            data = JSON.parse(safeStorage.getItem('girlMathData') || '{}');
         }
     }
     
@@ -1551,7 +1688,7 @@ async function handleShare() {
             const formData = new FormData(form);
             data = Object.fromEntries(formData);
         } else {
-            data = JSON.parse(sessionStorage.getItem('girlMathData') || '{}');
+            data = JSON.parse(safeStorage.getItem('girlMathData') || '{}');
         }
         
         if (data && data.price) {
@@ -1581,7 +1718,7 @@ async function handleShare() {
             alert('Error populating shareable card');
             return;
         }
-        
+
         // Temporarily show the ShareableCard (but keep it off-screen)
         shareableCard.style.position = 'fixed';
         shareableCard.style.top = '-9999px';
@@ -1590,19 +1727,34 @@ async function handleShare() {
         shareableCard.style.zIndex = '10000';
         shareableCard.style.width = '1080px';
         shareableCard.style.height = '1920px';
-        
+
         // Wait a moment for rendering
         await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Generate image using html-to-image
-        const dataUrl = await htmlToImage.toPng(shareableCard, {
-            width: 1080,
-            height: 1920,
-            pixelRatio: 2, // Higher quality for social media
-            quality: 1.0,
-            cacheBust: true // Ensure fresh rendering
-        });
-        
+
+        let dataUrl;
+        try {
+            // Generate image using html-to-image
+            dataUrl = await htmlToImage.toPng(shareableCard, {
+                width: 1080,
+                height: 1920,
+                pixelRatio: 2, // Higher quality for social media
+                quality: 1.0,
+                cacheBust: true // Ensure fresh rendering
+            });
+        } catch (imageError) {
+            console.error('Error generating image:', imageError);
+            // Hide ShareableCard on error
+            shareableCard.style.display = 'none';
+            // Fallback to copying link
+            const shareUrl = generateShareableUrl(data);
+            if (shareUrl) {
+                copyUrlToClipboard(shareUrl);
+            } else {
+                alert('Could not generate image. Please take a screenshot instead.');
+            }
+            return;
+        }
+
         // Hide ShareableCard again
         shareableCard.style.display = 'none';
         
@@ -1761,7 +1913,7 @@ async function generateAlternate() {
             data = Object.fromEntries(formData);
         } else {
             // Fallback to sessionStorage
-            data = JSON.parse(sessionStorage.getItem('girlMathData') || '{}');
+            data = JSON.parse(safeStorage.getItem('girlMathData') || '{}');
         }
     }
     

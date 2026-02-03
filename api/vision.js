@@ -3,11 +3,17 @@
 // This is a STANDALONE scanner - NOT connected to the Girl Math Calculator
 
 import { kv } from '@vercel/kv';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 // Cache TTL in seconds (24 hours)
 const CACHE_TTL = 86400;
+
+// API timeout in milliseconds (25 seconds - leave buffer for Vercel's 30s limit)
+const API_TIMEOUT = 25000;
+
+// Maximum image size: 5MB base64 encoded (reduced from 10MB for better performance)
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 /**
  * Log scanner result to Supabase
@@ -103,10 +109,9 @@ async function setCachedResult(cacheKey, result) {
     }
 }
 
-// Maximum image size: 10MB base64 encoded (approximately 7.5MB raw)
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-
 export default async function handler(req, res) {
+    // Generate request ID for tracing
+    const requestId = randomUUID().substring(0, 8);
     // Get origin for CORS - restrict to allowed origins
     const origin = req.headers.origin;
     const allowedOrigins = [
@@ -295,44 +300,66 @@ Return ONLY valid JSON in this EXACT format (no markdown, no extra text):
 - Be specific and confident - make your best educated guess
 - Every product has a realistic price range - never return $0`;
 
-        // Call OpenAI Vision API
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            {
-                                type: 'text',
-                                text: prompt
-                            },
-                            {
-                                type: 'image_url',
-                                image_url: {
-                                    url: imageDataUrl
+        // Call OpenAI Vision API with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+        let response;
+        try {
+            response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'X-Request-ID': requestId
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: prompt
+                                },
+                                {
+                                    type: 'image_url',
+                                    image_url: {
+                                        url: imageDataUrl
+                                    }
                                 }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: 1000,
-                temperature: 0.4 // Slightly higher for more creative guesses
-            })
-        });
+                            ]
+                        }
+                    ],
+                    max_tokens: 1000,
+                    temperature: 0.4 // Slightly higher for more creative guesses
+                }),
+                signal: controller.signal
+            });
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+                console.error(`[${requestId}] OpenAI API request timed out`);
+                return res.status(504).json({
+                    error: 'Request timed out',
+                    message: 'The image analysis took too long. Please try a smaller or clearer image.',
+                    requestId
+                });
+            }
+            throw fetchError;
+        }
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             // Don't expose internal API error details
-            console.error('OpenAI API error:', response.status);
-            return res.status(500).json({ 
+            console.error(`[${requestId}] OpenAI API error:`, response.status);
+            return res.status(500).json({
                 error: 'Failed to process image',
-                message: 'Please try again with a clearer image'
+                message: 'Please try again with a clearer image',
+                requestId
             });
         }
 
@@ -351,18 +378,21 @@ Return ONLY valid JSON in this EXACT format (no markdown, no extra text):
         
         // Cache the successful result
         await setCachedResult(cacheKey, normalizedResponse);
-        
+
         // Log to Supabase (awaited to ensure completion before function terminates)
         await logScanResult(normalizedResponse).catch(() => {});
-        
-        return res.status(200).json(normalizedResponse);
+
+        // Add request ID to response header for debugging
+        res.setHeader('X-Request-ID', requestId);
+        return res.status(200).json({ ...normalizedResponse, requestId });
 
     } catch (error) {
         // Don't expose internal error details
-        console.error('Error processing vision request:', error.message);
-        return res.status(500).json({ 
+        console.error(`[${requestId}] Error processing vision request:`, error.message);
+        return res.status(500).json({
             error: 'Internal server error',
-            message: 'Failed to process image. Please try again.'
+            message: 'Failed to process image. Please try again.',
+            requestId
         });
     }
 }

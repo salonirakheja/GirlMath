@@ -1,6 +1,9 @@
 // Vercel Serverless Function for SerpAPI Search
 // Girl Math Shop - Fetches real product offers from Google Shopping via SerpAPI
 
+// API timeout in milliseconds (15 seconds)
+const API_TIMEOUT = 15000;
+
 export default async function handler(req, res) {
     // Get origin for CORS - restrict to allowed origins
     const origin = req.headers.origin;
@@ -74,12 +77,31 @@ export default async function handler(req, res) {
             hl: 'en'  // Language: English
         });
 
-        const response = await fetch(`${serpApiUrl}?${params.toString()}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
+        // Add timeout to SerpAPI call
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+        let response;
+        try {
+            response = await fetch(`${serpApiUrl}?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                signal: controller.signal
+            });
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+                console.error('SerpAPI request timed out');
+            } else {
+                console.error('SerpAPI fetch error:', fetchError.message);
             }
-        });
+            // Return empty results on timeout/error - frontend will use fallback
+            return res.status(200).json({ offers: [] });
+        }
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const errorText = await response.text();

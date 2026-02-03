@@ -3,6 +3,39 @@
 
 const SHOP_CONTEXT_KEY = 'girlMathShopContext';
 
+// Safe sessionStorage wrapper for private browsing mode
+const safeStorage = {
+    getItem(key) {
+        try {
+            return sessionStorage.getItem(key);
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return null;
+        }
+    },
+    setItem(key, value) {
+        try {
+            sessionStorage.setItem(key, value);
+            return true;
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return false;
+        }
+    },
+    removeItem(key) {
+        try {
+            sessionStorage.removeItem(key);
+            return true;
+        } catch (e) {
+            console.warn('sessionStorage not available:', e.message);
+            return false;
+        }
+    }
+};
+
+// Track keyboard event listeners to prevent accumulation
+let keyboardListenersAttached = new WeakSet();
+
 function safeText(value) {
     return String(value ?? '').replace(/[<>]/g, '');
 }
@@ -204,10 +237,17 @@ function sortOffers(offers, mode) {
 
 function loadShopContext() {
     try {
-        const raw = sessionStorage.getItem(SHOP_CONTEXT_KEY);
+        const raw = safeStorage.getItem(SHOP_CONTEXT_KEY);
         if (!raw) return null;
-        return JSON.parse(raw);
-    } catch {
+        const parsed = JSON.parse(raw);
+        // Validate essential fields
+        if (!parsed || typeof parsed !== 'object') {
+            console.warn('Invalid shop context format');
+            return null;
+        }
+        return parsed;
+    } catch (e) {
+        console.warn('Error loading shop context:', e.message);
         return null;
     }
 }
@@ -218,12 +258,16 @@ function loadShopContext() {
  * @returns {Promise<Array>} Array of offer objects, or empty array on error
  */
 async function fetchRealOffers(candidate) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
     try {
         const productName = safeText(candidate?.name || '');
         const brand = safeText(candidate?.brand || '');
         const category = candidate?.category || 'other';
 
         if (!productName) {
+            clearTimeout(timeoutId);
             return [];
         }
 
@@ -236,8 +280,11 @@ async function fetchRealOffers(candidate) {
                 productName,
                 brand: brand || null,
                 category
-            })
+            }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             console.warn('Search API returned error, using fallback');
@@ -248,16 +295,21 @@ async function fetchRealOffers(candidate) {
         const offers = data.offers || [];
 
         // Validate offers have required fields
-        return offers.filter(offer => 
-            offer && 
-            typeof offer.price === 'number' && 
+        return offers.filter(offer =>
+            offer &&
+            typeof offer.price === 'number' &&
             offer.price > 0 &&
             offer.retailerName &&
             offer.url
         );
 
     } catch (error) {
-        console.warn('Error fetching real offers, using fallback:', error.message);
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            console.warn('Search API request timed out, using fallback');
+        } else {
+            console.warn('Error fetching real offers, using fallback:', error.message);
+        }
         return [];
     }
 }
@@ -302,7 +354,7 @@ function setup() {
 
     if (startOverBtn) {
         startOverBtn.addEventListener('click', () => {
-            sessionStorage.removeItem(SHOP_CONTEXT_KEY);
+            safeStorage.removeItem(SHOP_CONTEXT_KEY);
             window.location.href = 'index.html';
         });
     }
@@ -443,11 +495,19 @@ function setup() {
         setupKeyboardNavigation();
     }
     
-    // Keyboard navigation for offer cards
+    // Keyboard navigation for offer cards - prevents event listener accumulation
     function setupKeyboardNavigation() {
         const cards = offersEl.querySelectorAll('.offer-card');
         cards.forEach((card, index) => {
+            // Skip if we already attached listeners to this card
+            if (keyboardListenersAttached.has(card)) {
+                return;
+            }
+
             card.addEventListener('keydown', (e) => {
+                const allCards = offersEl.querySelectorAll('.offer-card');
+                const currentIndex = Array.from(allCards).indexOf(card);
+
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     const link = card.querySelector('.offer-shop-btn');
@@ -455,15 +515,18 @@ function setup() {
                 }
                 if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    const next = cards[index + 1];
+                    const next = allCards[currentIndex + 1];
                     if (next) next.focus();
                 }
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    const prev = cards[index - 1];
+                    const prev = allCards[currentIndex - 1];
                     if (prev) prev.focus();
                 }
             });
+
+            // Mark this card as having listeners attached
+            keyboardListenersAttached.add(card);
         });
     }
 }

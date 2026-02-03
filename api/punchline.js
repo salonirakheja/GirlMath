@@ -1,7 +1,10 @@
 // Vercel Serverless Function for AI-enhanced punchlines
 // Falls back to template-based generation if AI_API_KEY is not set
 
+import { randomUUID } from 'crypto';
+
 // Input validation constants
+const API_TIMEOUT = 10000; // 10 seconds
 const MAX_PRICE = 1000000; // $1M limit
 const MAX_USES = 10000;
 const ALLOWED_CATEGORIES = ['clothes', 'skincare', 'food', 'subscription', 'gift', 'jewellery', 'other'];
@@ -334,9 +337,12 @@ function generateTemplatePunchlines(metrics) {
 
 // Generate AI punchlines using OpenAI (optional)
 async function generateAIPunchlines(data, apiKey) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
     try {
-        const prompt = `Generate 2-3 playful, witty "girl math" punchlines for a ${data.category} purchase of $${data.price} in a ${data.mode} tone. 
-Cost per use: $${data.costPerUse?.toFixed(2) || 'N/A'}, Savings: $${data.savings || 0}. 
+        const prompt = `Generate 2-3 playful, witty "girl math" punchlines for a ${data.category} purchase of $${data.price} in a ${data.mode} tone.
+Cost per use: $${data.costPerUse?.toFixed(2) || 'N/A'}, Savings: $${data.savings || 0}.
 Keep it funny, relatable, and under 100 characters each. Return ONLY the punchlines, one per line, no numbering.`;
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -353,8 +359,11 @@ Keep it funny, relatable, and under 100 characters each. Return ONLY the punchli
                 ],
                 max_tokens: 150,
                 temperature: 0.9
-            })
+            }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`OpenAI API error: ${response.status}`);
@@ -362,7 +371,7 @@ Keep it funny, relatable, and under 100 characters each. Return ONLY the punchli
 
         const result = await response.json();
         const content = result.choices?.[0]?.message?.content;
-        
+
         if (content) {
             // Split by newlines and clean up
             return content.split('\n')
@@ -371,12 +380,17 @@ Keep it funny, relatable, and under 100 characters each. Return ONLY the punchli
                 .slice(0, 3);
         }
     } catch (error) {
+        clearTimeout(timeoutId);
         // Don't expose internal error details
-        console.error('AI generation failed:', error.message);
+        if (error.name === 'AbortError') {
+            console.error('AI generation timed out');
+        } else {
+            console.error('AI generation failed:', error.message);
+        }
         // Return empty array instead of throwing to fail gracefully
         return [];
     }
-    
+
     return [];
 }
 
